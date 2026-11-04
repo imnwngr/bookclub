@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>BookClub CTUT | Đang mở trang</title>
+    <script>
+      if (location.pathname.startsWith("/bookclub/"))
+        location.replace(
+          "/bookclub/?__spa=" +
+            encodeURIComponent(
+              location.pathname + location.search + location.hash,
+            ),
+        );
+    </script>
+  </head>
+  <body>
+    <p>Đang mở trang BookClub… <a href="/bookclub/">Về trang chủ</a></p>
+  </body>
+</html>

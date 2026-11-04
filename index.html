@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Sự kiện và thiệp mời Câu lạc bộ Sinh viên Yêu thích Sách CTUT."
+    />
+    <title>BookClub CTUT | Sự kiện & Thiệp mời</title>
+    <script>
+      (function () {
+        var u = new URL(location.href);
+        var route = u.searchParams.get("__spa");
+        if (route && route.startsWith("/bookclub/") && !route.startsWith("//"))
+          history.replaceState(null, "", route);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
