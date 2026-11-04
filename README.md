@@ -1,5 +1,7 @@
 # BookClub Event Manager CTUT
 
+**v1.0.0 đã deploy:** https://imnwngr.github.io/bookclub/ — RELEASED — PARTIALLY VERIFIED. Actions run 41797854015 thành công cho source 4c679c9. HTTP/assets/API production đã kiểm tra; UI production còn cần nghiệm thu thủ công. Xem mục PRODUCTION RELEASE mới nhất trong VERIFICATION.md; các ghi chú chưa triển khai bên dưới là lịch sử chuẩn bị dự án.
+
 Quản lý sự kiện và thiệp mời Câu lạc bộ Sinh viên Yêu thích Sách, Trường Đại học Kỹ thuật – Công nghệ Cần Thơ.
 
 - Local: `C:\Users\Tio\Downloads\bookclub`

@@ -1,5 +1,31 @@
 # Kết quả kiểm chứng BookClub
 
+## PRODUCTION RELEASE v1.0.0: RELEASED — PARTIALLY VERIFIED
+
+Release đã được người dùng phê duyệt. Source commit: 4c679c9b1cf9344918e78f4052c9c810090c9d2b, message release: bookclub v1.0.0, main, origin https://github.com/imnwngr/bookclub.git. Push bình thường thành công, remote SHA đã đối chiếu khớp source commit. Không force-push, không đổi schema/RLS, không xóa dữ liệu production. 54 file staged đã kiểm tra forbidden paths và token/private-key patterns trước commit; .env.local/artifacts không được commit.
+
+Đã cấu hình repository variables VITE_SUPABASE_URL và VITE_SUPABASE_PUBLISHABLE_KEY từ local mà không in key; Pages build_type workflow, HTTPS enabled. Workflow Verify and deploy BookClub: https://github.com/imnwngr/bookclub/actions/runs/41797854015 — completed/success, verify và deploy đều success, headSha đúng source commit trên. CI thực sự chạy npm ci, typecheck, ESLint, Vitest, Playwright, production build và upload dist/deploy Pages. Cảnh báo action Node20 được runner chuyển sang Node24 không làm job fail.
+
+Production: https://imnwngr.github.io/bookclub/
+
+| Phạm vi production smoke | Trạng thái | Bằng chứng/giới hạn |
+| --- | --- | --- |
+| Homepage HTTP | PASS | GET /bookclub/ 200; render/UI chưa xác minh |
+| Assets | PASS | index-BPHgW6Bg.js và index-Bd91xlY3.css HTTP 200 |
+| Supabase connectivity | PASS API | Bundle chứa đúng endpoint; REST events 200, 0 rows |
+| Auth/admin/session/logout UI | BLOCKED | Browser access host unavailable, không có phiên admin production |
+| CRUD, Draft/Published, selection, alias trên UI production | NOT RUN | Live API 23 PASS trước release và local UI 8/8 user-reported là bằng chứng riêng |
+| Thiệp production | NOT RUN | Không có fixture admin để kiểm tra người nhận qua production UI |
+| Deep links HTTP/fallback artifact | PASS | admin/, admin/new, admin/edit/qa-release-missing, qa-release-missing, qa-release-missing/nhvien đều HTTP 404 ban đầu, response có __spa fallback |
+| Client recovery/refresh/tab mới trên production | BLOCKED | Không có browser control, không báo UI PASS từ HTML/HTTP |
+| Responsive production | BLOCKED | Chưa kiểm thử bằng trình duyệt |
+| Maps/manual entry production UI | NOT RUN | Không có key, picker không được báo PASS; fallback đã có mã và nghiệm thu local tổng hợp |
+| Fixture cleanup | NOT RUN / không cần | Đợt smoke chỉ đọc, không tạo/sửa/xóa fixture production |
+
+Supabase Auth URL Configuration: không có quyền Dashboard/management API khả dụng, chưa sửa hoặc xác minh cấu hình. Site URL đề nghị https://imnwngr.github.io/bookclub/; allowlist khi dùng redirect: https://imnwngr.github.io/bookclub/**, http://127.0.0.1:5173/bookclub/**, http://localhost:5173/bookclub/**. Ứng dụng hiện dùng signInWithPassword/signOut, không có OAuth hoặc password recovery, nên các redirect URLs không phải điều kiện bắt buộc cho login mật khẩu hiện tại; cần thiết trước khi dùng email redirect/recovery.
+
+Giới hạn đã được chấp nhận: Maps picker thiếu key, main bundle khoảng 698 kB, deep-link HTTP 404 ban đầu. Không có bằng chứng lỗi production nghiêm trọng trong HTTP/API checks nhưng chưa chứng minh toàn bộ UI production. Bước còn lại: người dùng thực hiện UI-ACCEPTANCE.md trên origin production, gồm admin/non-admin, fixture QA riêng, public thiệp, refresh/tab mới và mobile; chỉ dọn fixture do lần thử đó tạo. Báo cáo này được commit riêng dạng docs [skip ci], không đổi source artifact đang deploy và không tạo deployment trùng.
+
 ## FINAL RELEASE REVIEW: CONDITIONAL GO
 
 Mục này là kết luận mới nhất, thay thế các trạng thái UI BLOCKED lịch sử bên dưới. Người dùng xác nhận **8/8 UI Acceptance USER-REPORTED PASS**. Không có kiểm thử trình duyệt live độc lập của Codex. Checklist UI-ACCEPTANCE.md gồm 12 mục chi tiết; chưa có ánh xạ 8 bước do người dùng thực hiện sang từng mục, vì vậy không tự báo 12/12 hoặc gán bằng chứng thao tác cụ thể. Nghiệm thu thủ công được chấp nhận làm release gate; thiếu tự động hóa trình duyệt live không tự nó chặn phát hành.
