@@ -13,6 +13,8 @@ export function db() {
 export function errorMessage(error: unknown) {
   if (error && typeof error === "object" && "code" in error) {
     const code = String(error.code);
+    if (code === "PGRST202")
+      return "Database chưa có RPC v1.1.0. Cần review và áp dụng migration trên môi trường thử nghiệm trước khi dùng tính năng nâng cấp.";
     if (code === "invalid_credentials")
       return "Email hoặc mật khẩu không đúng.";
     if (code === "email_not_confirmed")

@@ -1,33 +1,65 @@
-import { useState } from "react";
+import { GuestDescription } from "../components/GuestDescription";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { listGuests, saveGuest } from "../features/events/api";
+import { listGuests, saveGuest, setGuestActive } from "../features/events/api";
 import type { Guest } from "../types/domain";
-import { aliasSchema } from "../lib/domain";
+import { aliasSchema, guestAlias } from "../lib/domain";
 import { errorMessage } from "../lib/supabase";
 import { ErrorState, Loading } from "../components/Feedback";
+import { Switch } from "../components/Switch";
 const blank: Omit<Guest, "id"> = {
   salutation: "",
   name: "",
   description: "",
   kind: "individual",
   active: true,
-  default_aliases: [],
+  primary_alias: "",
 };
 export default function GuestDirectory() {
-  const query = useQuery({ queryKey: ["guests"], queryFn: listGuests });
-  const cache = useQueryClient();
+  const query = useQuery({ queryKey: ["guests"], queryFn: listGuests }),
+    cache = useQueryClient();
   const [editing, setEditing] = useState<Guest | Omit<Guest, "id">>(blank);
-  const [aliases, setAliases] = useState("");
   const [busy, setBusy] = useState(false);
-  const update = (values: Partial<Guest>) =>
-    setEditing((v) => ({ ...v, ...values }));
+  const locked = useRef(new Set<string>());
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+  const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});
+  const update = (value: Partial<Guest>) =>
+    setEditing((v) => ({ ...v, ...value }));
+  const toggle = async (g: Guest, value: boolean) => {
+    if (locked.current.has(g.id)) return;
+    locked.current.add(g.id);
+    setPending((v) => ({ ...v, [g.id]: true }));
+    setOptimistic((v) => ({ ...v, [g.id]: value }));
+    try {
+      await setGuestActive(g.id, value);
+      cache.setQueryData<Guest[]>(["guests"], (rows) =>
+        rows?.map((r) => (r.id === g.id ? { ...r, active: value } : r)),
+      );
+      setEditing((v) =>
+        "id" in v && v.id === g.id ? { ...v, active: value } : v,
+      );
+      toast.success("Đã lưu trạng thái khách mời");
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      locked.current.delete(g.id);
+      setPending((v) => ({ ...v, [g.id]: false }));
+      setOptimistic((v) => {
+        const next = { ...v };
+        delete next[g.id];
+        return next;
+      });
+    }
+  };
   return (
     <section className="admin">
       <Link to="/admin/">Về quản trị sự kiện</Link>
       <h1>Danh bạ khách mời</h1>
-      <p>Cập nhật danh bạ không thay đổi nội dung đã lưu trên thiệp hiện có.</p>
+      <p>
+        Cập nhật danh bạ không thay đổi snapshot hay alias của thiệp lịch sử.
+      </p>
       <div className="directory-layout">
         <div>
           {query.isPending ? (
@@ -36,18 +68,39 @@ export default function GuestDirectory() {
             <ErrorState error={query.error} />
           ) : (
             query.data?.map((g) => (
-              <article className="panel" key={g.id}>
+              <article
+                className={`panel ${"id" in editing && editing.id === g.id ? "guest-editing" : ""}`}
+                key={g.id}
+              >
+                {"id" in editing && editing.id === g.id && (
+                  <strong>Đang chỉnh sửa</strong>
+                )}
                 <h2>
                   {g.salutation} {g.name}
                 </h2>
-                <p>{g.description}</p>
-                <p>{g.active ? "Đang hoạt động" : "Ngừng hoạt động"}</p>
+                <GuestDescription value={g.description} />
+                <Switch
+                  checked={optimistic[g.id] ?? g.active}
+                  disabled={pending[g.id]}
+                  label={
+                    pending[g.id]
+                      ? "Đang lưu…"
+                      : (optimistic[g.id] ?? g.active)
+                        ? "Đang hoạt động"
+                        : "Ngừng hoạt động"
+                  }
+                  onChange={(value) => void toggle(g, value)}
+                />
                 <button
+                  type="button"
                   className="secondary"
-                  onClick={() => {
-                    setEditing(g);
-                    setAliases(g.default_aliases.join(", "));
-                  }}
+                  disabled={pending[g.id]}
+                  onClick={() =>
+                    setEditing({
+                      ...g,
+                      primary_alias: g.primary_alias ?? guestAlias(g.name),
+                    })
+                  }
                 >
                   Chỉnh sửa khách mời
                 </button>
@@ -59,14 +112,9 @@ export default function GuestDirectory() {
           className="panel"
           onSubmit={async (e) => {
             e.preventDefault();
-            const a = aliases
-              .split(",")
-              .map((v) => v.trim())
-              .filter(Boolean);
-            if (a.some((v) => !aliasSchema.safeParse(v).success)) {
-              toast.error(
-                "Alias chỉ gồm chữ thường không dấu, số và dấu gạch nối.",
-              );
+            const primary = editing.primary_alias || guestAlias(editing.name);
+            if (!aliasSchema.safeParse(primary).success) {
+              toast.error("Alias chính không hợp lệ.");
               return;
             }
             setBusy(true);
@@ -75,14 +123,13 @@ export default function GuestDirectory() {
                 {
                   ...editing,
                   name: editing.name.trim(),
-                  default_aliases: [...new Set(a)],
+                  primary_alias: primary,
                 },
                 "id" in editing ? editing.id : undefined,
               );
               await cache.invalidateQueries({ queryKey: ["guests"] });
               toast.success("Đã lưu khách mời");
               setEditing(blank);
-              setAliases("");
             } catch (err) {
               toast.error(errorMessage(err));
             } finally {
@@ -90,7 +137,11 @@ export default function GuestDirectory() {
             }
           }}
         >
-          <h2>{"id" in editing ? "Chỉnh sửa khách mời" : "Thêm khách mời"}</h2>
+          <h2>
+            {"id" in editing
+              ? `Đang chỉnh sửa: ${editing.name}`
+              : "Khách mời mới"}
+          </h2>
           <label>
             Danh xưng
             <input
@@ -102,8 +153,8 @@ export default function GuestDirectory() {
           <label>
             Họ tên hoặc tên nhóm *
             <input
-              required
               value={editing.name}
+              required
               maxLength={240}
               onChange={(e) => update({ name: e.target.value })}
             />
@@ -129,33 +180,26 @@ export default function GuestDirectory() {
             </select>
           </label>
           <label>
-            Alias gợi ý (phân cách bằng dấu phẩy)
+            Alias chính
             <input
-              value={aliases}
-              onChange={(e) => setAliases(e.target.value)}
+              value={editing.primary_alias ?? ""}
+              onChange={(e) => update({ primary_alias: e.target.value })}
+              placeholder={guestAlias(editing.name)}
             />
-          </label>
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={editing.active}
-              onChange={(e) => update({ active: e.target.checked })}
-            />
-            Đang hoạt động
+            <small>
+              Để trống để tạo từ họ tên khi lưu. Alias thiệp cũ không thay đổi.
+            </small>
           </label>
           <div className="actions">
             <button disabled={busy}>
               {busy ? "Đang lưu…" : "Lưu khách mời"}
             </button>
             <button
-              className="secondary"
               type="button"
-              onClick={() => {
-                setEditing(blank);
-                setAliases("");
-              }}
+              className="secondary"
+              onClick={() => setEditing(blank)}
             >
-              Nhập khách mới
+              Khách mời mới
             </button>
           </div>
         </form>

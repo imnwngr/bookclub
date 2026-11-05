@@ -1,9 +1,13 @@
+import { GuestDescription } from "../components/GuestDescription";
+import { MeetingSchedule } from "../components/MeetingSchedule";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { resolveInvitation } from "../features/events/api";
 import { Empty, ErrorState, Loading } from "../components/Feedback";
 import { EventInfo } from "../components/EventInfo";
+import { Agenda } from "../components/Agenda";
+import { InvitationLogos } from "../components/InvitationLogos";
 export default function InvitationPage() {
   const { eventCode = "", guestAlias = "" } = useParams();
   const [opened, setOpened] = useState(false);
@@ -26,34 +30,65 @@ export default function InvitationPage() {
   const { event, invitation } = query.data;
   return (
     <article className={`invitation ${opened ? "opened" : ""}`}>
-      <p className="section-label">BookClub CTUT · Trân trọng kính mời</p>
       {!opened ? (
         <div className="invitation-cover">
-          <p className="serif">
+          <InvitationLogos />
+          <p className="section-label">BookClub CTUT · Trân trọng kính mời</p>
+          <p className="invitation-tagline">
             Một lời mời,
             <br />
             một cuộc gặp gỡ.
           </p>
-          <p>
-            {invitation.salutation} <strong>{invitation.name}</strong>
+          <p className="cover-recipient">
+            <span>{invitation.salutation}</span>{" "}
+            <strong>{invitation.name}</strong>
           </p>
+          <GuestDescription value={invitation.description} />
           <button onClick={() => setOpened(true)}>Mở thiệp mời</button>
         </div>
       ) : (
-        <div className="invitation-content">
-          <p className="section-label">Thư mời tham dự</p>
-          <p>Kính gửi {invitation.salutation}</p>
-          <h1>{invitation.name}</h1>
-          <p className="recipient-role">{invitation.description}</p>
-          <div className="invitation-rule" />
-          <p>
-            {invitation.kind === "group"
-              ? "BookClub thân mời các thành viên và cộng tác viên cùng tham gia"
-              : "Câu lạc bộ Sinh viên Yêu thích Sách trân trọng kính mời quý vị đến tham dự"}
-          </p>
-          <h2>{event.title}</h2>
-          {event.description && <p className="prose">{event.description}</p>}
-          <EventInfo event={event} />
+        <div className="invitation-content invitation-sections">
+          <section
+            className="invitation-section invitation-greeting"
+            id="invitation-greeting"
+            tabIndex={-1}
+          >
+            <InvitationLogos />
+            <p className="section-label">Thư mời tham dự</p>
+            <p>Kính gửi {invitation.salutation}</p>
+            <h1>{invitation.name}</h1>
+            <GuestDescription value={invitation.description} />
+            <div className="invitation-rule" />
+            <p>
+              {invitation.kind === "group"
+                ? "BookClub thân mời các thành viên và cộng tác viên cùng tham gia"
+                : "Câu lạc bộ Sinh viên Yêu thích Sách trân trọng kính mời quý vị đến tham dự"}
+            </p>
+            <h2>{event.title}</h2>
+            {event.description && <p className="prose">{event.description}</p>}
+            <a className="section-next" href="#invitation-schedule">
+              Xem thời gian và địa điểm ↓
+            </a>
+          </section>
+          <MeetingSchedule event={event} />
+          {(event.venue_image_path || event.directions) && (
+            <section
+              className="invitation-section meeting-venue"
+              id="invitation-venue"
+              tabIndex={-1}
+            >
+              <EventInfo event={event} />
+            </section>
+          )}
+          {!!event.agenda?.length && (
+            <section
+              className="invitation-section invitation-program"
+              id="invitation-program"
+              tabIndex={-1}
+            >
+              <Agenda items={event.agenda} />
+            </section>
+          )}
           <p className="invitation-signoff">
             Sự hiện diện của{" "}
             {invitation.kind === "group" ? "các bạn" : "quý vị"} là niềm vinh

@@ -1,4 +1,11 @@
 export type Publication = "draft" | "published";
+export interface AgendaItem {
+  time: string;
+  end_time?: string | null;
+  icon?: string | null;
+  description: string;
+  highlight: boolean;
+}
 export interface ClubEvent {
   id: string;
   code: string;
@@ -16,6 +23,9 @@ export interface ClubEvent {
   maps_url: string;
   created_at: string;
   updated_at: string;
+  location_method?: "url" | "place";
+  venue_image_path?: string | null;
+  agenda?: AgendaItem[];
 }
 export interface Guest {
   id: string;
@@ -24,7 +34,8 @@ export interface Guest {
   description: string;
   kind: "individual" | "group";
   active: boolean;
-  default_aliases: string[];
+
+  primary_alias?: string;
 }
 export interface Invitation {
   id: string;

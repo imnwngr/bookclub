@@ -5,7 +5,8 @@ import type {
   Guest,
   Invitation,
 } from "../../types/domain";
-import { availableAlias } from "../../lib/domain";
+import { guestAlias } from "../../lib/domain";
+import { discardVenueImage } from "./images";
 export async function listEvents(admin = false) {
   const events: ClubEvent[] = [];
   for (let offset = 0; ; offset += 500) {
@@ -23,11 +24,7 @@ export async function listEvents(admin = false) {
   }
 }
 export async function getEvent(code: string) {
-  const { data, error } = await db()
-    .from("events")
-    .select("*")
-    .eq("code", code)
-    .maybeSingle();
+  const { data, error } = await db().rpc("get_event_v110", { p_code: code });
   if (error) throw error;
   return data as ClubEvent | null;
 }
@@ -63,6 +60,16 @@ export async function saveEvent(
   guestIds: string[],
   existing?: ClubEvent,
 ) {
+  if (event.agenda?.some((item) => item.end_time || item.icon)) {
+    const capability = await db()
+      .from("event_agenda_items")
+      .select("end_time,icon")
+      .limit(0);
+    if (capability.error)
+      throw Error(
+        "Database chưa hỗ trợ khoảng giờ và icon chương trình. Chưa lưu thay đổi; cần áp dụng bản SQL nâng cấp đã được review.",
+      );
+  }
   const { data, error } = await db().rpc("save_event", {
     p_event: event,
     p_guest_ids: guestIds,
@@ -73,31 +80,45 @@ export async function saveEvent(
   return data as ClubEvent;
 }
 export async function deleteEvent(id: string) {
+  const before = await db()
+    .from("events")
+    .select("venue_image_path")
+    .eq("id", id)
+    .maybeSingle();
+  if (before.error) throw before.error;
   const { error } = await db().from("events").delete().eq("id", id);
   if (error) throw error;
-}
-export async function addAlias(invitation: Invitation, alias: string) {
-  const { error } = await db().from("invitation_aliases").insert({
-    event_id: invitation.event_id,
-    event_guest_id: invitation.id,
-    alias,
-  });
-  if (error) throw error;
-}
-export async function removeAlias(id: string) {
-  const { error } = await db().from("invitation_aliases").delete().eq("id", id);
-  if (error) throw error;
+  if (before.data?.venue_image_path) {
+    try {
+      await discardVenueImage(before.data.venue_image_path);
+    } catch {
+      throw Error(
+        "Sự kiện đã xóa; ảnh chưa dùng vẫn có trong danh sách dọn ảnh tạm.",
+      );
+    }
+  }
 }
 export async function saveGuest(guest: Omit<Guest, "id">, id?: string) {
-  const payload = {
+  const payload: Partial<Omit<Guest, "id">> = {
     ...guest,
-    default_aliases: guest.default_aliases.length
-      ? guest.default_aliases
-      : [availableAlias(guest.name, [])],
+    primary_alias: guest.primary_alias || guestAlias(guest.name),
   };
+  // Active is saved by its independent switch; a directory edit must not overwrite a newer toggle.
+  if (id) delete payload.active;
   const query = id
     ? db().from("guests").update(payload).eq("id", id)
     : db().from("guests").insert(payload);
   const { error } = await query;
   if (error) throw error;
+}
+export async function setGuestActive(id: string, active: boolean) {
+  const { data, error } = await db()
+    .from("guests")
+    .update({ active })
+    .eq("id", id)
+    .select("id,active")
+    .single();
+  if (error) throw error;
+  if (data?.id !== id || data.active !== active)
+    throw Error("Trạng thái chưa được lưu. Vui lòng tải lại danh bạ.");
 }

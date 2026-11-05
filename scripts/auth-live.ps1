@@ -1,3 +1,4 @@
+param([switch] $RebuildV110, [switch] $RpcExecuteOnly, [switch] $RefinementOnly)
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath (Join-Path $PSScriptRoot '..')
 # Read-Host keeps credentials out of command history and process arguments.
@@ -12,7 +13,8 @@ function Reveal([Security.SecureString] $value) {
 }
 try {
   $payload = @{ adminEmail=(Reveal $adminEmail); adminPassword=(Reveal $adminPassword); userEmail=(Reveal $userEmail); userPassword=(Reveal $userPassword) } | ConvertTo-Json -Compress
-  $payload | node --env-file=.env.local scripts/auth-live.mjs
+  $runner = if ($RefinementOnly) { 'scripts/refinement-live.mjs' } elseif ($RpcExecuteOnly) { 'scripts/rpc-execute-live.mjs' } elseif ($RebuildV110) { 'scripts/rebuild-live.mjs' } else { 'scripts/auth-live.mjs' }
+  $payload | node --env-file=.env.local $runner
   $result = $LASTEXITCODE
 } finally {
   $payload = $null

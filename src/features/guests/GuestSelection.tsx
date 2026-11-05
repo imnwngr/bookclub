@@ -54,10 +54,7 @@ export function GuestSelection({
               <strong>
                 {g.salutation} {g.name}
               </strong>
-              <small>
-                {g.description}
-                {!g.active && " (Ngừng hoạt động)"}
-              </small>
+              <small>{!g.active && " (Ngừng hoạt động)"}</small>
             </span>
           </label>
         ))}

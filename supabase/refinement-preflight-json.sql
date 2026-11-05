@@ -1,0 +1,23 @@
+-- READ ONLY — project trdofhdspbkwgernwybp. One statement, one row, one JSON column.
+-- This report includes invitation snapshots and agenda content; share it only with authorized reviewers.
+select jsonb_build_object(
+ 'agenda_schema',coalesce((select jsonb_agg(to_jsonb(q) order by q.column_name) from (select column_name,data_type,is_nullable from information_schema.columns where table_schema='public' and table_name='event_agenda_items') q),'[]'::jsonb),
+ 'existing_milestones',(select count(*) from public.event_agenda_items),
+ 'agenda_rows',coalesce((select jsonb_agg(to_jsonb(a) order by a.event_id,a.sort_order,a.id) from public.event_agenda_items a),'[]'::jsonb),
+ 'secondary_aliases_by_invitation',coalesce((select jsonb_agg(to_jsonb(q) order by q.event_id,q.invitation_id) from (select eg.event_id,eg.id as invitation_id,count(*) as secondary_alias_count from public.invitation_aliases a join public.event_guests eg on eg.id=a.event_guest_id where a.alias<>eg.primary_alias group by eg.event_id,eg.id) q),'[]'::jsonb),
+ 'rpc_definitions',coalesce((select jsonb_agg(to_jsonb(q) order by q.signature) from (select p.oid::regprocedure::text as signature,pg_get_functiondef(p.oid) as definition,p.proacl from pg_proc p where p.oid in ('public.save_event(jsonb,uuid[],uuid,timestamptz)'::regprocedure,'public.resolve_invitation(text,text)'::regprocedure)) q),'[]'::jsonb),
+ 'refinement_columns',coalesce((select jsonb_agg(to_jsonb(q) order by q.column_name) from (select 'refinement_columns' as check_name,column_name from information_schema.columns where table_schema='public' and table_name='event_agenda_items' and column_name in ('end_time','icon')) q),'[]'::jsonb),
+ 'rpc_acl_overloads',coalesce((select jsonb_agg(to_jsonb(q) order by q.proname,q.signature) from (select p.proname,pg_get_function_identity_arguments(p.oid) as signature,p.prosecdef,p.proconfig,p.proacl::text as acl from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('save_event','resolve_invitation','primary_invitation_alias_only','event_payload_v110','is_admin')) q),'[]'::jsonb),
+ 'effective_privileges',jsonb_build_object(
+   'anon_save',has_function_privilege('anon','public.save_event(jsonb,uuid[],uuid,timestamptz)','execute')::text,
+   'authenticated_save',has_function_privilege('authenticated','public.save_event(jsonb,uuid[],uuid,timestamptz)','execute')::text,
+   'anon_resolve',has_function_privilege('anon','public.resolve_invitation(text,text)','execute')::text,
+   'authenticated_alias_insert',has_table_privilege('authenticated','public.invitation_aliases','insert')::text,
+   'authenticated_alias_delete',has_table_privilege('authenticated','public.invitation_aliases','delete')::text),
+ 'rls_tables',coalesce((select jsonb_agg(to_jsonb(q) order by q.relname) from (select c.relname,c.relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('events','guests','event_guests','invitation_aliases','event_agenda_items','admin_users','venue_image_uploads')) q),'[]'::jsonb),
+ 'policies',coalesce((select jsonb_agg(to_jsonb(q) order by q.schemaname,q.tablename,q.policyname) from (select schemaname,tablename,policyname,cmd,roles,qual,with_check from pg_policies where schemaname in ('public','storage')) q),'[]'::jsonb),
+ 'nguyen_hoang_vien_directory',coalesce((select jsonb_agg(to_jsonb(q)) from (select id,name,description,description='Ủy viên Ban Chấp hành Thành đoàn Cần Thơ, Bí thư Đoàn Trường, Phó Trưởng phòng Kiểm tra - Pháp chế - Truyền thông.' as matches_expected_old_description from public.guests where id='10000000-0000-4000-8000-000000000001') q),'[]'::jsonb),
+ 'invitation_snapshots',coalesce((select jsonb_agg(to_jsonb(q) order by q.event_id,q.invitation_id) from (select eg.id as invitation_id,eg.event_id,e.code as event_code,e.status as event_status,eg.guest_id,eg.salutation,eg.name,eg.description,eg.kind,eg.primary_alias,eg.created_at,eg.updated_at from public.event_guests eg join public.events e on e.id=eg.event_id) q),'[]'::jsonb),
+ 'noncanonical_invitation_count',(select count(*) from public.event_guests eg join public.guests g on g.id=eg.guest_id where eg.primary_alias is distinct from g.primary_alias),
+ 'alias_totals',(select jsonb_build_object('all_aliases',count(*),'secondary_aliases',count(*) filter(where a.alias<>eg.primary_alias),'published_secondary_links_will_stop_resolving',count(*) filter(where a.alias<>eg.primary_alias and e.status='published')) from public.invitation_aliases a join public.event_guests eg on eg.id=a.event_guest_id join public.events e on e.id=eg.event_id)
+) as refinement_preflight;

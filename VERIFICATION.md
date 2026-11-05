@@ -1,4 +1,198 @@
+## FIX RELEASE BLOCKERS — staged review
+
+- BLOCKER 1 FIXED: README mô tả production đã clean rebuild/refinement; phân biệt SQL lịch sử, rebuild đã chạy, refinement đã chạy và audit; không hướng dẫn chạy chuỗi migration cũ trên production. Tài liệu lịch sử gắn nhãn; REBUILD là destructive đã thực thi, không dùng setup thông thường. Setup project mới phải review baseline/refinement phù hợp riêng và cấp admin qua UUID runtime.
+- BLOCKER 2 FIXED: UID admin production được ẩn trong reports, SQL dùng current_setting('bookclub.reviewed_admin_uid', true)::uuid và test dùng fixture UUID. Không đổi Auth/permissions production. Không có email thật phát hiện trong index; domain email duy nhất trong test là test.invalid.
+- Kiểm thử mới liên quan: tests/rebuild-transaction.test.ts, tests/rebuild-database.test.ts, tests/refinement-database.test.ts **19/19 PASS** PostgreSQL local/PGlite. Không chạy lại 19 API live, 11 nhóm UI live hoặc Playwright. Bằng chứng trước đó: 68/68 full Vitest, UI live 11 nhóm, API refinement 19/19, TypeScript/ESLint/build PASS.
+- Staged allowlist: 76 file source/config/docs/SQL lịch sử/tests/logos. scripts/live-ui-session.mjs và scripts/live-ui-acceptance.mjs không staged, không phải dependency của npm/scripts chính thức. .env.local, artifacts, reports, screenshots ignored. Scan index từng file trước cập nhật biên bản: 0 UID production, 0 private key/GitHub token/Supabase secret/JWT thật; JWT fixture có chữ ký .test. Scan chỉ theo pattern, không đảm bảo tuyệt đối.
+- Frontend v1.1 đã nghiệm thu Supabase thật trước lượt sửa; chỉ tài liệu/SQL review và fixture test thay đổi trong lượt này, không đổi frontend hay live database. Base /bookclub/, Pages workflow và variables đã kiểm tra; production frontend v1.0 còn có nguy cơ không tương thích đến khi phát hành.
+- Trạng thái: **GO cho phê duyệt phát hành riêng**, không phải đã phát hành. Sau phê duyệt: staged diff/remote SHA lần cuối → commit một lần → push main bình thường → theo dõi Actions đúng SHA → production smoke. Nếu lỗi, dùng artifact frontend đã xác minh tương thích schema hiện tại hoặc trang bảo trì; không mặc định rollback v1.0. Không chạy lại SQL đã COMMIT.
+
+## UI LIVE ACCEPTED — READY FOR RELEASE REVIEW (2026-11-05)
+
+Frontend http://127.0.0.1:5173/bookclub/ kết nối project trdofhdspbkwgernwybp thật, không route interception/API mocks. Người dùng đăng nhập Admin trực tiếp trong Chrome cô lập; agent không đọc/lưu email, password, access token, refresh token hoặc storageState. Không bật trace đăng nhập. Log 19/19 refinement API PASS trước đó đã đọc, không chạy lại bộ backend.
+
+Nghiệm thu độc lập qua Playwright điều khiển Chrome có phiên Admin thật: **11 nhóm LIVE PASS** trong log Live UI acceptance cuối file. Fixtures QA riêng, không mở sửa Draft hiện có. Lượt cuối qa-ui-13a6e1e6-3979-4cbf-b7b1-44ce0d9a1181 (đối chiếu mã thực tế ở log, không dùng mã này cho thao tác xóa thủ công). Tạo Draft qua form, chọn một khách từ directory, upload PNG fixture riêng, chọn ngày 20→21/10/2099 và giờ 18→20 (UTC+7), agenda 18:00→18:30/icon welcome/highlight. Lưu/reload thực, xác minh ngày nhiều ngày, range/icon/highlight/ảnh được bảo toàn.
+
+| Yêu cầu compact | Kết quả |
+|---|---|
+| 1. Danh sách thiệp chỉ tên | LIVE PASS — không GuestDescription, preview/copy thật |
+| 2. Checkbox khách chỉ tên | LIVE PASS — chọn khách thật, không chức vụ |
+| 3. Một range control / nhiều ngày | LIVE PASS — đóng không có date inputs, popup nhập/lưu/reload |
+| 4. Bỏ hướng dẫn HH:mm cũ | PASS source/local; form live dùng đúng component mới |
+| 5. Switch và xóa cùng đầu mốc | LIVE PASS — thao tác switch ở agenda-card-head |
+| 6. Ba hàng/icon picker đóng | LIVE PASS — mở/chọn icon, đóng, lưu/reload |
+| 7. Preview/copy/copy all | LIVE PASS — click popup URL canonical và clipboard thật so sánh |
+| 8. Typography và chức vụ thiệp | LIVE PASS — tên lớn hơn tagline, chức vụ trước/sau, calendar/logos/decoded image/highlight timeline |
+| 9. Phân cấp tham khảo, giữ K2D/BookClub | PASS thiết kế/source + LIVE PASS render desktop/320px, không tràn ngang |
+
+Anonymous context riêng xác minh Draft không công khai; sau Publish bằng switch/lưu, thiệp hiển thị từ Supabase thật. Cuộn tới timeline và ngược lên greeting ở 1280px/320px PASS. Đã chụp và xem ảnh mobile 320px có ảnh venue thật của fixture; snapshots trong test-results/live-ui (ignored). Ảnh desktop cũng đã chụp. Đây là local UI + production database LIVE, **không phải frontend GitHub Pages production v1.1**.
+
+Cleanup qua UI đúng article chứa title QA và DELETE theo UUID fixture, không xóa khách. Hậu kiểm authenticated read-only: qaUiEventsRemaining=0; unusedImages=0; cả hai queries không lỗi. Không có thao tác cập nhật vào event Draft người dùng. Các checks ledger/source thao tác chỉ fixture QA, không có snapshot trước/sau toàn database để tuyên bố audit mọi dữ liệu hệ thống.
+
+**Release readiness: CONDITIONAL GO — chờ release review và phê duyệt commit/push/deploy riêng.** Database/refinement API PASS và UI live acceptance PASS. Production frontend vẫn v1.0, chưa deploy v1.1/production smoke; có rủi ro payload v1.0 không tương thích schema mới đã ghi nhận. Maps JS picker chưa có key (luồng URL/Place ID vẫn dùng được), bundle lớn/Pages initial HTTP404 là giới hạn đã chấp nhận. Không sửa source UI vì chưa phát hiện lỗi trong acceptance; chỉ thêm helper/runner live và tài liệu. Không rebuild/migrate/commit/push/deploy.
+
+Các mục MANUAL PENDING/BLOCKED UI trong lịch sử bên dưới đã được buổi live này thay thế; các MOCK PASS cũ vẫn được giữ với phạm vi riêng.
+
+## REFINEMENT MIGRATION — POSTFLIGHT VERIFIED (user-executed)
+
+Người dùng xác nhận migration 202611050001_ui_refinement.sql đã được phê duyệt và thực thi. Postflight: hai mốc cũ giữ UUID/time/description/highlight/order, end_time=NULL/icon=book; constraints hiện diện/invalid_ranges=0; mô tả directory và Draft snapshot đúng; RLS 7/7; anon_save=false/authenticated_save=true; authenticated alias INSERT/UPDATE/DELETE=false; primary-only trigger có, secondary/noncanonical counts=0. Đây là bằng chứng hậu kiểm SQL do người dùng cung cấp, thay thế trạng thái chờ apply ở lịch sử bên dưới.
+
+Agent kiểm tra API read-only trên project: SELECT time,end_time,icon,highlight LIMIT 0 HTTP 200; anonymous is_admin HTTP 200/false. Không tạo fixture. Không dùng probe này để tuyên bố đầy đủ live Auth/CRUD/agenda/primary-only đạt sau migration.
+
+Đã tạo scripts/refinement-live.mjs và cờ auth-live.ps1 -RefinementOnly. Runner dùng signInWithPassword thật, credentials từ stdin do SecureString prompt truyền vào, không ghi email/password/tokens; snapshot legacy chỉ đọc và so sánh; fixture event UUID riêng, 2 range/icon/highlight items; reload, Draft/Published/public canonical snapshot, nonadmin save, direct numeric-suffix aliases, invitation_edits bị chặn, cleanup theo internal fixture UUID. Node syntax và ESLint PASS; **Auth live runner mới NOT RUN** vì chưa có người nhập credentials local. UI local save/reload với phiên Auth mới vẫn BLOCKED chờ API runner đạt. Không chạy lại migration/rebuild hoặc 41 tests cũ.
+
+Chạy tại máy: powershell -NoProfile -File .\scripts\auth-live.ps1 -RefinementOnly (trong thư mục dự án). Sau API PASS nghiệm thu local RangePicker multi-day, agenda popup/icon grid, save/reload và Published invitation/anonymous; chỉ dọn fixture QA. Không commit/push/deploy trong lượt này. Chưa chốt REFINEMENT LIVE VERIFIED/UI ACCEPTANCE.
+
+## FINAL CHECK — chưa đủ dữ liệu chi tiết để kết luận SAFE TO APPLY
+
+Preflight production do người dùng tóm tắt: 2 mốc, end_time/icon chưa có, 7/7 RLS, anon_save=false/authenticated_save=true, 10 aliases/0 secondary, 10 snapshots của một Draft, directory/snapshot Nguyễn Hoàng Viện đều chứa nội dung cũ. Chưa có toàn bộ JSON trong phiên này: chưa xác minh **snapshot khớp chính xác từng ký tự với nội dung cũ trong WHERE**, hay **primary_alias của từng snapshot khớp canonical trong directory**. Không suy ra hai điều này từ số lượng alias phụ bằng 0.
+
+Migration production duy nhất sau review: supabase/migrations/202611050001_ui_refinement.sql. Trong một transaction + lock_timeout 5s, khóa bảng liên quan; dừng nếu schema đã đổi/đã áp dụng, không đúng 2 mốc, có alias phụ, canonical snapshot khác directory, không đúng một Draft target hoặc description cũ không khớp chính xác. UPDATE có điều kiện chính xác chỉ directory guest ID 10000000-0000-4000-8000-000000000001 và snapshot Draft tương ứng; Published snapshot/khách khác không thay đổi. Thêm end_time NULL và icon book, giữ 2 UUID mốc tại thời điểm migration; save_event về sau có thể thay UUID agenda do delete/insert. Không tự tạo suffix hay nhận invitation_edits phụ; direct authenticated alias writes bị thu hồi, trigger bảo vệ primary và resolver chỉ primary. Guard cuối kiểm tra ACL effective và 7 RLS trước COMMIT. Không thay Auth/Storage/RLS policies.
+
+Kiểm thử local tests/refinement-database.test.ts + refinement-api.test.ts **9/9 PASS**, bao gồm cố ý gây lỗi cuối transaction rồi ROLLBACK kiểm tra description/schema/2 agenda IDs giữ nguyên, chạy lại bị chặn, canonical primary/alias phụ, range/icon, ACL/RLS và postflight JSON 1 hàng. Đây là PGlite với Auth/Storage shim, không phải live migration. ESLint và git diff --check PASS. Chưa chạy migration production.
+
+Trình tự: (1) chạy supabase/refinement-final-guards.sql chỉ đọc trên đúng project, mong đợi agenda_count=2, directory_exact_match=1, target_draft_count=1, target_draft_exact_match=1, secondary_alias_count=0, noncanonical_invitation_count=0, refinement_columns_count=0; lưu export preflight đầy đủ gồm agenda IDs/RPC ACL để đối chiếu. (2) Nếu mọi giá trị khớp và người dùng phê duyệt riêng, chạy toàn bộ migration một lần; bất kỳ lỗi -> ROLLBACK và báo, không sửa guard để ép qua. (3) chạy supabase/refinement-postflight-json.sql, so sánh 2 agenda IDs/nội dung với export; end_time NULL/icon book, target description mới, các snapshot khác không đổi, secondary=0/noncanonical=0, anon_save=false, authenticated_save=true, anon_resolve=true, alias write privileges=false, RLS 7/7. (4) Live fixture Auth/agenda/icon/primary route/Draft/Published và cleanup; không chạy lại toàn bộ suite cũ.
+
+Không áp dụng SQL, rebuild, commit, push hay deploy trong lượt review. Frontend production v1.0 vẫn có rủi ro không tương thích schema v1.1 hiện tại; không xác nhận UI production PASS. Đoạn BLOCKED cũ dưới đây là lịch sử, thay bằng điều kiện chính xác trên.
+
+## FINAL REVIEW — BLOCKED chờ preflight production hiện tại
+
+Ngày 2026-11-05: probe API chỉ đọc project trdofhdspbkwgernwybp: event_agenda_items.time HTTP 200; end_time,icon HTTP 400/42703. Migration cần thiết; chưa áp dụng. tests/refinement-database.test.ts + refinement-api.test.ts **6/6 PASS** trên PGlite/mock, không phải Supabase live. Production baseline user-reported 18/18 flags, 41+9 Auth/API PASS là bằng chứng trước migration, không thay cho preflight hiện tại.
+
+Migration transaction thêm end_time nullable + icon whitelist/default, giữ mốc cũ NULL; save_event giữ signature, is_admin, optimistic locking, UTC fields và ACL anon/auth; resolve_invitation vẫn Published/admin. Trigger và REVOKE authenticated thay đổi quyền direct alias; existing secondary alias rows giữ lại nhưng link phụ sẽ ngừng resolve. Trước khi áp dụng phải kiểm tra số link phụ Published và chấp nhận ảnh hưởng, kể cả khi dữ liệu lịch sử hiện được phép bỏ. Không thay RLS policies/Storage; quyền alias table thay đổi có chủ đích. V1.0 frontend còn default_aliases và thiếu location_method nên có rủi ro lỗi CRUD với schema v1.1 đã tồn tại, độc lập migration này; migration cũng ngừng resolve link phụ. Không thể báo v1.0 tương thích toàn diện hoặc UI production PASS.
+
+Migration không idempotent: ADD COLUMN/CONSTRAINT/FUNCTION/TRIGGER lần hai lỗi; transaction rollback khi lỗi trước COMMIT. Sau COMMIT ưu tiên roll-forward, lưu export definition/ACL trước khi chạy; không DROP range/icon đã có dữ liệu. save_event thay agenda bằng DELETE/INSERT khi payload có agenda: nội dung được lưu lại nhưng UUID các agenda item có thể thay đổi khi lưu; không tuyên bố bảo toàn ID qua các lần save. SQL mô tả riêng khớp nguyên văn yêu cầu, dùng điều kiện ID/name/description cũ, không sửa snapshot; nếu 0 rows dừng review, không nới WHERE. Chạy riêng chỉ khi review/cho phép cập nhật directory.
+
+Preflight/postflight đã mở rộng kiểm tra columns, overload/signature, function body/ACL, RLS policies, alias counts và mô tả. Chưa có output preflight hiện tại, chưa xác nhận số link phụ/ACL thực tế, chưa test migration/Auth/Storage HTTP trên staging. Vì vậy kết luận **BLOCKED**: chưa đủ bằng chứng để nói SAFE TO APPLY. Sau khi có preflight, nếu có xung đột/ảnh hưởng ngoài dự kiến thì dừng và review; sau phê duyệt riêng mới thực hiện migration → postflight → live fixture tests.
+
+## COMPACT UI REFINEMENT — READY FOR ACCEPTANCE
+
+| # | Yêu cầu | Trạng thái / bằng chứng local |
+|---|---|---|
+| 1 | Thiệp mời admin bỏ chức vụ | DONE — InvitationManager, browser compact |
+| 2 | Chọn khách chỉ danh xưng/tên | DONE — GuestSelection, browser compact |
+| 3 | Một range control cho agenda và sự kiện nhiều ngày | DONE — RangePicker dùng DateTime24/Time24 trong popover; UTC+7, browser save/reload hai ngày |
+| 4 | Bỏ dòng hướng dẫn HH:mm | DONE — EventForm, lỗi chỉ hiện khi invalid |
+| 5 | Switch và xóa ở đầu mốc | DONE — AgendaEditor, browser compact |
+| 6 | Ba hàng, icon picker đóng mặc định | DONE — AgendaEditor/CSS, browser 320px |
+| 7 | Hàng thiệp tên + preview/copy, giữ copy all | DONE — InvitationManager, browser regression |
+| 8 | Tên nổi bật hơn tagline, K2D và chức vụ thiệp | DONE — InvitationPage/CSS, browser 320px |
+| 9 | Đối chiếu nguyên tắc HTML tham khảo | DONE — dùng quan sát reference đã ghi trong báo cáo refinement trước: recipient heading, role lines, lịch, timeline; không sao chép nguồn hoặc font |
+
+Kiểm thử mới: TypeScript PASS; ESLint PASS; Vitest 10/10 PASS; build PASS; Playwright full 44/44 PASS + compact 4/4 PASS, desktop/mobile **API mocks**. Compact test dùng 320px, xác minh title/tagline, role trước/sau, popup giờ/icon, lưu/reload mock và UTC hai ngày. Chưa kiểm thử UI live cho code mới.
+
+SQL: không có SQL mới trong đợt compact. Migration refinement trước đó 202611050001_ui_refinement.sql vẫn chờ review/phê duyệt và chưa được áp dụng production. Không rebuild database, commit, push, deploy hay thay Auth/RLS. Source và các thay đổi chưa commit trước đó được giữ.
+
+## BOOKCLUB v1.1.0 — UI REFINEMENT READY FOR ACCEPTANCE
+
+Hoàn tất **8/8 yêu cầu ở local**, chưa áp dụng SQL/commit/push/deploy. Database baseline trước refinement đã LIVE VERIFIED (18/18 flags, 41+9 API checks) vẫn được giữ nguyên; kết quả đó không thay thế kiểm thử live migration refinement.
+
+| # | Yêu cầu | Triển khai và bằng chứng local |
+|---|---|---|
+| 1 | Xóa hướng dẫn đổi mã sai | Không còn câu hướng dẫn trong EventForm; sửa code vẫn hoạt động, không thêm redirect. Playwright kiểm tra không có dòng này. |
+| 2 | Phương thức địa điểm | Hai selectable cards với icon link/pin, title/hint, radio keyboard/selected state; giữ dữ liệu khi đổi. Fix width radio và scroll safe-area mobile bằng trace thực, không force click. |
+| 3 | Tách mô tả | GuestDescription + descriptionLines dùng ở cover/thiệp/danh bạ/selection/manager; split dấu phẩy/newline, trim/bỏ dòng trống, text React an toàn. SQL mô tả Nguyễn Hoàng Viện chuẩn bị riêng, chưa đổi production/snapshot. |
+| 4 | Chức vụ trước/sau mở | Cover có salutation/name/all role lines và nút mở; phần kính mời giữ lại snapshot. Unit/browser + xem ảnh 320px không chồng/cắt. |
+| 5 | Khoảng giờ | Giờ mốc đánh số, start/end HH:mm, sort/delete renumber/highlight; validation end>start; legacy time giữ nguyên, không tự đoán end. SQL/PGlite save và public RPC roundtrip. |
+| 6 | Chỉ alias chính | Bỏ add/edit/remove/list alias phụ và invitation_edits frontend; copy/link chính đúng một URL. SQL review chặn direct writes + RPC phụ, giữ rows cũ, resolver chỉ primary; chưa áp dụng live. |
+| 7 | Thiệp nhiều section | Kính mời → lịch/thời gian/địa điểm → thông tin/ảnh/hướng dẫn → agenda; root scroll-snap proximity, không khóa wheel/touch, reduced motion tắt snap/smooth; thiếu ảnh/hướng dẫn hoặc agenda tự bỏ section tương ứng. Browser long-content scroll hai chiều và empty layout PASS. |
+| 8 | Icon chương trình | Grid 9 icon nét SVG nhất quán, có preview/aria-pressed, fallback book; enum whitelist trong SQL, save/reload/RPC roundtrip local. Không cài dependency mới hoặc tuyên bố giống hoàn toàn bộ icon mẫu. |
+
+**Kết quả kiểm thử:** TypeScript/ESLint/production build PASS; **22/22 Vitest PASS** (5 files: refinement unit/API/SQL và image/domain regressions); **42/42 Playwright PASS** full desktop/mobile, cộng **2/2 targeted long-content/empty-section PASS** sau đó. Browser dùng API mocks; SQL dùng PostgreSQL WASM/PGlite với Auth/Storage shim. Không báo thành live PASS. Đã xem ảnh cover/open mobile 320px và desktop, không overflow; dữ liệu ảnh fixture mock, không tạo event production. Cảnh báo bundle 708.81 kB được giữ ngoài phạm vi tối ưu.
+
+Tham khảo URL bookclub.io.vn/102026/nhvien qua Chrome: title/cover đọc được và có Lucide class; chưa xác minh chính xác icon timeline động bên trong. Dùng bộ SVG nét tương đương tự dựng, không sao chép source/layout. Giữ K2D, giấy sáng/xanh BookClub và bốn logo hiện có. Anti-slop UI/human/mobile dùng để rà soát; Hallmark không có trong skill catalog hiện tại.
+
+**Cần review trước live:** UI-REFINEMENT-SQL-REVIEW.md; migration 202611050001_ui_refinement.sql, refinement-preflight.sql/refinement-postflight.sql; SQL mô tả riêng nguyen-hoang-vien-description-review.sql. New range/icon và khóa alias API cần migration này, không áp dụng production trong đợt triển khai. Frontend có guard columns để không âm thầm bỏ range/icon khi schema chưa hỗ trợ. Nội dung mô tả mới chỉ hiển thị sau update dữ liệu được phê duyệt; snapshot lịch sử không tự sửa.
+
+Bước nghiệm thu: chạy local /bookclub/; cover role lines → mở và cuộn/keyboard qua section; editor cards/giờ/icon/primary copy; thử 320px và desktop/reduced motion. Nghiệm thu persistence live/primary-only backend sau khi SQL được phê duyệt, rồi review release riêng. Production UI vẫn chưa được deploy/nâng cấp; không tuyên bố production UI PASS.
+
+Các báo cáo dưới là lịch sử của baseline/đợt trước, không thay đổi kết luận refinement ở trên.
+
+## DATABASE REBUILT — LIVE VERIFIED (2026-11-05)
+
+Bằng chứng đã đối chiếu: người dùng xác nhận 06-postflight-flags.sql sau hotfix **18/18 actual=expected** (anon_save_execute=false, authenticated_save_execute=true, private bucket, RLS 7 bảng, admin/2 Auth accounts và 10 canonical guests). Đây là kết quả SQL do người dùng thực thi, không phải agent trực tiếp chạy SQL.
+
+Log live trong VERIFICATION.md: **41/41 API PASS** (2026-11-04T16:56:36.300Z), **9/9 targeted RPC hotfix PASS** (2026-11-04T23:19:08.246Z), cleanup PASS cả hai. Đã đọc log, không chạy lại. Kết hợp hậu kiểm và phiên Auth thật đủ chốt database LIVE VERIFIED; không còn blocker database đã ghi ở các mục lịch sử bên dưới.
+
+Local v1.1 tại http://127.0.0.1:5173/bookclub/: server Vite đã tồn tại (khởi chạy mới gặp port in use, không dừng server có sẵn); HTTP homepage/admin/new/guests đều 200 và app entry đúng. Module Supabase phục vụ đúng project trdofhdspbkwgernwybp, module API có get_event_v110. Chrome headless smoke không mocks: homepage events API HTTP 200, main/h1 visible, 0 pageerror; admin anonymous hiện login/password, 0 pageerror. Đây là smoke thực trên local/live API, không phải UI acceptance đầy đủ. Không tạo fixture mới.
+
+Production GET homepage/asset HTTP 200, đang phục vụ /bookclub/assets/index-BPHgW6Bg.js; bundle còn default_aliases, không có get_event_v110. Đối chiếu source release v1.0: saveGuest dùng default_aliases.length/payload cột đã bỏ; form v1.0 thiếu location_method và có thể gửi maps_url rỗng, không đáp ứng constraint schema mới. Đó là nguy cơ tương thích được xác định từ artifact/source, không phải kết quả thao tác admin production; không thử ghi dữ liệu qua UI cũ và không tuyên bố production UI PASS. Homepage đọc events có thể vẫn hoạt động nhưng không chứng minh đủ tính năng v1.1.
+
+**Release readiness sơ bộ: CONDITIONAL GO để UI ACCEPTANCE / RELEASE REVIEW; chưa sẵn sàng tuyên bố release.** Database PASS; local public/login smoke PASS; 16 mục UI v1.1 live + regression/cleanup cần người dùng nghiệm thu theo UI-ACCEPTANCE-v1.1.md đã chỉnh sang clean rebuild (không giữ URL cũ). UI production v1.1 NOT DEPLOYED. Maps JS key chưa có không chặn URL/Place ID; bundle lớn và Pages HTTP404 fallback là giới hạn đã chấp nhận. Cần nghiệm thu UI rồi phê duyệt commit/push/deploy riêng, sau đó smoke production đúng commit. Không migration/rebuild/commit/push/deploy trong lượt này.
+
+Các mục BLOCKED/17-of-18/chưa có Auth live phía dưới là lịch sử và được kết luận này thay thế.
+
+## RPC EXECUTE HOTFIX — local PASS / production chưa áp dụng
+
+Đã đọc log Clean v1.1 Auth/Storage live runner 2026-11-04T16:56:36.300Z trong file này: **41 API PASS**, gồm Auth admin/nonadmin, CRUD, Draft/Published, agenda, aliases, Storage HTTP và cleanup. Không chạy lại 41 checks. Người dùng báo postflight 17/18, duy nhất anon_save_execute=true thay vì false.
+
+Phân tích nguồn: save_event(jsonb,uuid[],uuid,timestamptz) chỉ REVOKE từ PUBLIC, không thu hồi grant trực tiếp của anon do default privileges khi CREATE FUNCTION. Đã tái hiện local với ALTER DEFAULT PRIVILEGES ... GRANT EXECUTE ... TO anon, authenticated. Đây chứng minh đường gây lỗi trong code; **chưa có output ACL/default privileges production để phân biệt grant trực tiếp do defaults với grant thủ công hoặc role inheritance**. File supabase/hotfixes/save-event-execute-audit.sql chỉ đọc liệt kê mọi overload, effective ACL, explicit grants, default grants theo creator và role memberships. Không tự nhận đã kiểm tra ACL live.
+
+Hotfix riêng supabase/hotfixes/save-event-execute.sql: transaction có guard đúng một overload/signature và SECDEF/admin guard; REVOKE EXECUTE từ PUBLIC, anon trên duy nhất function; GRANT authenticated; assert effective privileges trước COMMIT. Không sửa body/is_admin, schema defaults, RLS, Storage hoặc dữ liệu. Nếu inherited grants còn gây anon_execute=true, rollback và dừng review; không tự thu hồi role rộng. Chưa áp dụng production, đang chờ người dùng review.
+
+Đã cập nhật 02-schema.sql và REBUILD.sql local với REVOKE EXECUTE ... FROM PUBLIC, anon. **Không chạy lại REBUILD.sql trên database đã dựng.** Tests/rebuild-transaction.test.ts **3/3 local PASS**: dựng với default grants anon, hotfix PUBLIC+direct grants, chạy hotfix lặp, anon permission denied for function, nonadmin Admin required, admin RPC create+cleanup; body save_event và ACL/body resolve_invitation giữ nguyên. ESLint/Node syntax/git diff check PASS.
+
+Sau phê duyệt và áp dụng hotfix: chạy 06-postflight-flags.sql (cần 18/18); chạy auth-live.ps1 -RpcExecuteOnly cho targeted Auth/RPC tests, không chạy bộ 41. Runner mới xác minh anon bị chặn tại ACL (không chỉ admin guard), nonadmin guard, admin create/update/readback và cleanup fixture UUID. Chưa chạy targeted live; UI production v1.1 chưa deploy. **Chưa chốt DATABASE REBUILT — VERIFIED.**
+
+## POST-REBUILD — USER-REPORTED SQL + 9/9 anonymous live API PASS
+
+Người dùng xác nhận đã chạy REBUILD.sql và 05-postflight.sql trên project trdofhdspbkwgernwybp. Nội dung hậu kiểm được gửi có 7 bảng, 10 guest IDs cố định với tên/danh xưng/mô tả/alias canonical đúng seed; admin UID [UID quản trị đã ẩn], auth_user_count=2, event_count=0. Bucket bookclub-venues có giới hạn 5242880 và MIME JPG/PNG/WebP. Danh sách policies và constraints khớp thiết kế (FK snapshot/alias, deferred primary alias, event image registry, agenda HH:mm/order, unique event code/guest primary alias).
+
+Bản dán không phải JSON hợp lệ: các khóa boolean/null bị mất giá trị và có escaping Markdown. Không tự khôi phục/suy diễn rls/public/active/rpc_privileges/legacy_rpc_absent/old_code_table_absent/system_helper_preserved. Cần chạy 06-postflight-flags.sql chỉ đọc để lấy 18 dòng actual/expected dạng text. Script mới đã được kiểm thử trong rebuild transaction suite 2/2 local PASS; không phải live flags PASS.
+
+Agent đã thực thi kiểm tra API live bằng publishable key, không Auth session: **9/9 PASS, 0 FAIL**, bằng chứng chi tiết ở mục Post-rebuild anonymous API phía cuối báo cáo. get_event_v110/resolve_invitation HTTP 200 null với code/alias không tồn tại; is_admin=false; save_event bị từ chối HTTP 401/42501; private directory/recipient/image registry bị từ chối 42501; events/agenda endpoints HTTP 200. Không tạo fixture, không thay schema và không đụng dữ liệu khác. Không dùng kết quả này để suy ra mọi RLS policy hoặc Draft/Published/Storage lifecycle đều đạt.
+
+**BLOCKED AUTH LIVE**: chưa có phiên admin/nonadmin thật trong runner mới, chưa kiểm CRUD/agenda/image HTTP/thiệp Published/persistence/cleanup end-to-end. Chạy auth-live.ps1 -RebuildV110 trên máy, nhập credentials bằng SecureString, không gửi credentials/token vào chat. UI kết nối database mới NOT RUN. Không chạy lại REBUILD.sql. Không commit/push/deploy. Chưa đủ DATABASE REBUILT — VERIFIED.
+
+## CLEAN REBUILD — inventory đã đối chiếu, gói SQL local đã kiểm thử
+
+Inventory SQL Editor do người dùng cung cấp: đúng 5 bảng foundation, 5 hàm BookClub + rls_auto_enable hệ thống; Storage không bucket/object/policy; 2 Auth users, admin UID [UID quản trị đã ẩn]. Xem supabase/rebuild-v110/INVENTORY-REVIEW.md. Giữ Auth, system RLS helper và tất cả event triggers hệ thống.
+
+Gói REBUILD.sql reset/schema/seed/admin restore trong một transaction, DROP RESTRICT, guard inventory drift, không CASCADE/schema reset/Storage metadata deletion. Đã kiểm thử trên PostgreSQL local **10/10 SQL PASS**, gồm rollback external view và chặn chạy lại. Nhóm schema+component/image **20/20 PASS** (có trùng 8 SQL tests, không cộng số); **38/38 Playwright PASS với API mocks** desktop/mobile. TypeScript/build, ESLint và Node syntax PASS. Bundle 704.67 kB là giới hạn đã chấp nhận.
+
+Runner scripts/rebuild-live.mjs và cờ auth-live.ps1 -RebuildV110 đã chuẩn bị cho Auth/Storage HTTP thật, chưa chạy. Supabase live rebuild/postflight/Auth/Storage/UI vẫn NOT RUN. Script thủ công và lệnh trong supabase/rebuild-v110/README.md. Agent không có phiên SQL truy cập được; inventory là user-provided, không tự nhận đã thực thi. Chưa reset database thật, chưa commit/push/deploy.
+
+Mục CLEAN DATABASE REBUILD trước đó và các báo cáo migration bên dưới là lịch sử; trạng thái hiện tại đã có inventory và gói rebuild, đang chờ thực thi live theo quy trình đã chuẩn bị.
+
+## CLEAN DATABASE REBUILD — đang thực hiện (thay thế kế hoạch giữ dữ liệu v1.0)
+
+Người dùng cho phép xóa riêng dữ liệu BookClub để xây schema v1.1 mới; giữ Auth và tài khoản, khôi phục admin UID hợp lệ. Chưa chạy xóa/reset live. Xem supabase/rebuild-v110/README.md và SQL inventory/schema/seed trong cùng thư mục. Không dùng chuỗi upgrade cũ để rebuild.
+
+Bằng chứng mới: schema độc lập tạo được trên PostgreSQL local, seed 10 guests canonical; tests/rebuild-database.test.ts **5/5 PASS**, TypeScript PASS sau chỉnh frontend, ESLint PASS. Đã bỏ default_aliases payload và phương thức địa điểm legacy trong source. Không có event-code history trong schema mới; URL cũ sau đổi code không còn được hỗ trợ theo quyết định mới.
+
+Chưa có inventory live để chốt allowlist reset và admin mapping. Browser host unavailable; Computer Use thấy Chrome SQL Editor nhưng get_window hết thời gian chờ quyền ứng dụng. Không có CLI SQL/connector được cấu hình. Đã cung cấp 00-inventory.sql chỉ đọc. Auth/RLS/Storage HTTP/UI với schema mới chưa chạy; chưa đủ DATABASE REBUILT / LIVE VERIFIED. Không commit/push/deploy.
+
+Các kết quả migration giữ dữ liệu ở bên dưới là lịch sử và không chứng minh schema rebuild mới.
+
 # Kết quả kiểm chứng BookClub
+
+## MIGRATION REVIEW v1.1.0: BLOCKED chờ bằng chứng staging/preflight thật
+
+Review mới phát hiện và sửa local: guest_alias_v110 không còn âm thầm bỏ alias chỉnh từ v1.0 default_aliases; archive secondary aliases, giữ invitation aliases. Revoke client EXECUTE trên trigger helpers, thêm admin guard cho remember_event_code. Bộ review/upgrade SQL tests đã chạy **14/14 PASS**, gồm payload v1.0 sau migration 1 trước Storage, tọa độ/địa chỉ, guest edits và ACL helpers. Đây là PGlite, không phải staging live.
+
+Giới hạn compatibility: v1.0 event detail SELECT theo code không biết event_codes khi code đã đổi; không bật renames trước deploy frontend mới và không rollback cached v1.0 không backport resolver. Thiệp cũ vẫn qua resolve_invitation; tests local old-code PASS. Hai migration là hai transaction; partial success cần giữ UI v1.0 và roll-forward, không DROP dữ liệu. SQL preflight/hậu kiểm đã mở rộng để kiểm tra function definition/ACL/search_path, triggers/FK/grants, collisions và quyền helpers.
+
+Không có môi trường staging riêng được cấu hình trong phiên: local chỉ trỏ production, không thực thi SQL ở đó. Chưa có output tiền kiểm hiện tại/backup dữ liệu thật, chưa test Supabase Storage HTTP v1.1 trên staging. Do đó chưa đủ SAFE TO APPLY. Không commit/push/deploy hoặc thay database production. Xem MIGRATION-v1.1.md cho các điều kiện còn thiếu và rollback limits.
+
+## v1.1.0 — READY FOR MIGRATION REVIEW / UI ACCEPTANCE (local)
+
+**Biên bản chốt:** Vitest toàn bộ **41/41 PASS** (6 files), TypeScript PASS, ESLint PASS; build cuối PASS (main JS 704.73 kB/gzip 204.74 kB). Full Playwright 38/38 PASS với mock APIs; sau sửa cuối đã chạy lại 4 directory tests, 8 editor tests và 2 logo/visual tests, đều PASS. Đã xem ảnh thiệp mobile cuối sau animation hoàn tất. Không có Supabase v1.1 live PASS. Git diff check PASS; 16 file tracked sửa và 24 file mới (gồm 4 PNG), chưa stage/commit. HEAD vẫn b70aa7f. File baseline foundation và workflow không đổi. Các con số cũ trong các đoạn dưới là tiến trình kiểm thử trước biên bản này.
+
+Kết quả tổng hợp cuối đã chạy: **40/40 unit/component/SQL PASS**, TypeScript PASS, ESLint PASS, full Playwright **38/38 PASS** (API mocks desktop/mobile), production build PASS. Bản sửa cuối tách active khỏi payload sửa guest để tránh ghi đè switch autosave; kiểm tra directory browser liên quan và build được chạy bổ sung. Không có live v1.1 PASS.
+
+Đã đối chiếu đủ 16 thay đổi trong UPGRADE-v1.1.md. Hai migration mới và pre/postflight scripts đã chạy trên PostgreSQL WASM local, không sửa foundation v1.0 hoặc rls_auto_enable. Tests chứng minh old-code resolution, old aliases nhvien/1/full-name, UUID/snapshot, agenda, alias edits atomic, quyền helpers/admin/anonymous, private bucket/ảnh Published-only và referenced-object deletion guard. Auth và Storage schema trong SQL tests là shim, không phải live Supabase service.
+
+Các checks đã chạy: TypeScript PASS; ESLint PASS; production build PASS (main JS 704.70 kB, gzip 204.73 kB, cảnh báo kích thước được giữ ngoài phạm vi tối ưu). Browser suite 38/38 PASS trên Chrome desktop/mobile emulation với API mocks: gồm regression Auth/CRUD/routing và v1.1 dirty/undo, alias staged, code/auto slug, Place ID, logos, clipboard, image file/paste-event, agenda. Các tests unit/component/SQL đã chạy 39/39 và lần bổ sung SQL Draft/helper permissions 10/10 riêng; kết quả tổng hợp cuối được ghi thêm sau khi chạy. Image tests cover success/failure cleanup tracking, preview/replacement/removal/paste, private Blob render/error; không coi mock là Storage live PASS.
+
+Logo nguồn bookclub.io.vn được người dùng xác nhận quyền dùng, PNG đã tải/kiểm signature, naturalWidth và overflow trong browser. Đã xem ảnh thiệp mobile. K2D toàn website, fallback/preconnect/display swap; không khẳng định font tải được trên mọi mạng.
+
+Không có write live/database schema/commit/push/deploy cho v1.1. Local HEAD vẫn b70aa7f; production source 4c679c9 giữ nguyên. .env.local/dist/dist-e2e/test-results vẫn ignored; scan Git file-list với patterns tokens/private keys trả 0 match. Đây là scan giới hạn, không phải bảo đảm tuyệt đối.
+
+Chưa xác minh: Supabase Storage HTTP thực, migration với dữ liệu production hiện tại, staging UI/người dùng nhập Ctrl+V OS thật và live v1.1 Auth/RLS. Cần phê duyệt review/apply staging/production riêng trước các thao tác đó. Upload failure/network cleanup fail giữ registry pending để retry, không có object không được theo dõi; UI dọn pending của uploader quá 24h để tránh phá công việc tab khác. Chi tiết gate Storage policies và rollback ở MIGRATION-v1.1.md. Các mục báo đang triển khai/chưa READY phía dưới là lịch sử, được mục này thay thế.
+
+## v1.1.0: đợt triển khai đầu, chưa hoàn tất
+
+Xem UPGRADE-v1.1.md cho phần đã sửa và phần còn thiếu. TypeScript/ESLint PASS, unit/integration local 20/20 PASS. Chưa có live hoặc UI v1.1 PASS, chưa đủ 16 yêu cầu và chưa READY. Production v1.0.0 giữ nguyên, không commit/push/deploy/migrate.
 
 ## PRODUCTION RELEASE v1.0.0: RELEASED — PARTIALLY VERIFIED
 
@@ -244,3 +438,139 @@ Fixture: qa-auth-de6d8b96-80d1-41d0-a5ff-b8072965ec46
 - PASS API: non-admin cannot enumerate recipient records
 - PASS API: cleanup deleted only run fixture
 - UI: NOT RUN by API runner
+
+## Rebuild runner review — 2026-11-04T16:34:13.728Z
+
+- Read-only live probe POST /rest/v1/rpc/get_event_v110 trên project đúng: HTTP 404, PGRST202. RPC chưa khả dụng qua API tại thời điểm kiểm tra; không suy ra chỉ từ probe rằng SQL đã hay chưa chạy. Không tạo fixture và không thay đổi database.
+- Runner rebuild-live.mjs được gia cố: negative upload dùng valid registered paths; theo dõi tất cả fixture paths; cleanup kiểm tra object listing và registry thực sự vắng; timeout request 30 giây; HTTP 300 được phân loại FAIL API.
+- Node syntax và ESLint PASS. Runner Auth/Storage thật chưa chạy; không có live PASS mới. Vẫn cần REBUILD.sql COMMIT + 05-postflight.json và credentials nhập local qua auth-live.ps1 -RebuildV110.
+
+## Post-rebuild anonymous API 2026-11-04T16:51:45.641Z
+
+Executed against exact project using publishable key, no Auth session, no fixture created. Denied save_event probe supplies empty payload and has no write authorization.
+
+- PASS API: anonymous is_admin false; HTTP=200; code=none
+- PASS API: get_event_v110 available; missing code returns null; HTTP=200; code=none
+- PASS API: resolve_invitation available; missing alias returns null; HTTP=200; code=none
+- PASS API: anonymous save_event denied; HTTP=401; code=42501
+- PASS API: anonymous directory enumeration denied; HTTP=401; code=42501
+- PASS API: anonymous invitation enumeration denied; HTTP=401; code=42501
+- PASS API: anonymous registry enumeration denied; HTTP=401; code=42501
+- PASS API: public events endpoint available; HTTP=200; code=none
+- PASS API: agenda endpoint available; HTTP=200; code=none
+
+These checks do not prove admin/nonadmin Auth, seed content, private bucket flag, Published fixture rendering or Storage HTTP lifecycle.
+
+## Clean v1.1 Auth/Storage live runner 2026-11-04T16:56:36.300Z
+Fixture: qa-auth-175eddf3-ebaf-4bb0-99a7-39bbf9f4ff1d
+
+- PASS API: admin password authentication
+- PASS API: non-admin password authentication
+- PASS API: admin is_admin=true
+- PASS API: non-admin is_admin=false
+- PASS API: admin reads guest directory
+- PASS API: create and reload persisted Draft
+- PASS API: anonymous cannot read Draft
+- PASS API: non-admin cannot read Draft
+- PASS API: save_event guest-selection update returned successfully before embedding read
+- PASS API: guest selection persisted
+- PASS API: alias uniqueness enforced
+- PASS API: anonymous Draft invitation hidden
+- PASS API: non-admin RPC write denied
+- PASS API: non-admin direct update affects zero rows
+- PASS API: non-admin direct delete affects zero rows
+- PASS API: update and reload persisted Published
+- PASS API: anonymous can read Published
+- PASS API: anonymous resolves correct published recipient
+- PASS API: anonymous cannot enumerate recipient records
+- PASS API: non-admin can read Published
+- PASS API: non-admin resolves correct published recipient
+- PASS API: non-admin cannot enumerate recipient records
+- PASS API: admin uploads fixture image via Storage HTTP
+- PASS API: nonadmin Storage upload denied on valid registered path
+- PASS API: anonymous Storage upload denied on valid registered path
+- PASS API: Draft image hidden via Storage HTTP
+- PASS API: admin reads Draft image
+- PASS API: anonymous reads Published image via controlled Storage HTTP
+- PASS API: agenda and highlight persist through public RPC
+- PASS API: event code change preserves internal UUID
+- PASS API: old event code is not retained after clean rebuild
+- PASS API: invitation resolves under renamed event code
+- PASS API: unpublish revokes public invitation
+- PASS API: unpublish revokes future image downloads
+- PASS API: cleanup deleted only run fixture
+- PASS API: cleanup verified fixture object absent
+- PASS API: cleanup verified fixture registry absent
+- PASS API: cleanup verified fixture object absent
+- PASS API: cleanup verified fixture registry absent
+- PASS API: cleanup verified fixture object absent
+- PASS API: cleanup verified fixture registry absent
+- UI: NOT RUN by API runner
+
+## Targeted save_event ACL live runner 2026-11-04T23:19:08.246Z
+Fixture: qa-auth-6e5e89a8-7c2b-4c56-84bb-0996ff91840b
+
+- PASS API: admin password authentication
+- PASS API: non-admin password authentication
+- PASS API: admin is_admin=true
+- PASS API: non-admin is_admin=false
+- PASS API: anonymous rejected by function EXECUTE ACL, not only is_admin guard
+- PASS API: nonadmin can invoke but is_admin guard denies write
+- PASS API: authenticated admin RPC creates Draft
+- PASS API: authenticated admin RPC update persists
+- PASS API: cleanup deleted only run fixture
+- UI: NOT RUN by API runner
+
+## Refinement focused live runner 2026-11-05T04:12:16.465Z
+Fixture: qa-auth-97952738-41ef-4550-9c1e-3852cc0a7d21
+
+- PASS API: admin password authentication
+- PASS API: non-admin password authentication
+- PASS API: admin is_admin=true
+- PASS API: non-admin is_admin=false
+- PASS API: legacy NULL-end agenda reads safely (read only)
+- PASS API: active canonical guest available
+- PASS API: admin creates separate Draft fixture
+- PASS API: reload preserves time/end_time/icon/highlight/content
+- PASS API: anonymous Draft invitation hidden
+- PASS API: fixture uses directory canonical primary alias
+- PASS API: nonadmin cannot save fixture
+- PASS API: nonadmin cannot directly create secondary numeric-suffix alias
+- PASS API: admin cannot directly create secondary numeric-suffix alias
+- PASS API: save_event rejects secondary invitation edits
+- PASS API: Published primary invitation resolves correct snapshot
+- PASS API: anonymous Published agenda roundtrip preserves all fields
+- PASS API: secondary alias cannot resolve
+- PASS API: existing legacy agenda untouched
+- PASS API: cleanup deleted only run fixture
+- UI: NOT RUN by API runner
+
+## Live UI acceptance 2026-11-05T04:17:53.828Z
+Fixture: qa-ui-4e037cae-8395-4ba1-b123-1cc67475fc28
+
+- LIVE PASS: Admin UI authenticated
+- LIVE PASS: single date-time range / multi-day / 24h UI
+- LIVE PASS: guest list name-only / selection
+- LIVE PASS: three-row agenda / range / closed icon picker / highlight
+- LIVE PASS: create / save / reload / agenda highlight and venue image persistence
+- LIVE PASS: multi-day and icon survive reload
+- LIVE PASS: invitation name-only row / preview canonical URL / real clipboard and copy all
+- LIVE PASS: anonymous Draft invitation hidden
+- LIVE PASS: anonymous Published invitation / roles before-after / hierarchy / calendar / image / agenda
+- LIVE PASS: desktop and 320px live UI / scroll both directions / no horizontal overflow
+- LIVE PASS: cleanup UI deleted only fixture UUID (event/image cleanup flow)
+
+## Live UI acceptance 2026-11-05T04:19:52.821Z
+Fixture: qa-ui-13a6e1e6-3979-4cbf-b7b1-44ce0d9a1181
+
+- LIVE PASS: Admin UI authenticated
+- LIVE PASS: single date-time range / multi-day / 24h UI
+- LIVE PASS: guest list name-only / selection
+- LIVE PASS: three-row agenda / range / closed icon picker / highlight
+- LIVE PASS: create / save / reload / agenda highlight and venue image persistence
+- LIVE PASS: multi-day and icon survive reload
+- LIVE PASS: invitation name-only row / clicked preview / real clipboard and copy all
+- LIVE PASS: anonymous Draft invitation hidden
+- LIVE PASS: anonymous Published invitation / roles before-after / hierarchy / calendar / decoded image / highlighted icon timeline
+- LIVE PASS: desktop and 320px live UI / scroll both directions / no horizontal overflow
+- LIVE PASS: cleanup UI deleted only fixture UUID (event/image cleanup flow)

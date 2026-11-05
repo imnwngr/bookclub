@@ -1,5 +1,6 @@
+import { agendaIcons } from "../components/AgendaIcon";
 import { z } from "zod";
-import type { ClubEvent } from "../types/domain";
+import type { ClubEvent, Invitation } from "../types/domain";
 export const reservedCodes = [
   "admin",
   "auth",
@@ -38,7 +39,7 @@ export const aliasSchema = z
   .max(80);
 export const eventSchema = z
   .object({
-    code: codeSchema,
+    code: z.union([codeSchema, z.literal("")]),
     title: z.string().trim().min(1, "Vui lòng nhập tên sự kiện.").max(240),
     description: z.string().max(10000),
     starts_at: z.string().min(1, "Chọn giờ bắt đầu."),
@@ -50,6 +51,42 @@ export const eventSchema = z
     latitude: z.number().min(-90).max(90).nullable(),
     longitude: z.number().min(-180).max(180).nullable(),
     place_id: z.string(),
+    location_method: z.enum(["url", "place"]).optional(),
+    venue_image_path: z.string().nullable().optional(),
+    agenda: z
+      .array(
+        z
+          .object({
+            time: z
+              .string()
+              .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Nhập giờ HH:mm hợp lệ."),
+            end_time: z
+              .string()
+              .regex(
+                /^([01]\d|2[0-3]):[0-5]\d$/,
+                "Nhập giờ kết thúc HH:mm hợp lệ.",
+              )
+              .nullable()
+              .optional(),
+            icon: z
+              .string()
+              .refine((v) => v in agendaIcons, "Icon không hợp lệ.")
+              .nullable()
+              .optional(),
+            description: z
+              .string()
+              .trim()
+              .min(1, "Nhập nội dung chương trình.")
+              .max(1000),
+            highlight: z.boolean(),
+          })
+          .refine((v) => !v.end_time || v.end_time > v.time, {
+            path: ["end_time"],
+            message: "Giờ kết thúc phải sau giờ bắt đầu.",
+          }),
+      )
+      .max(100)
+      .optional(),
     maps_url: z
       .string()
       .refine(
@@ -57,6 +94,16 @@ export const eventSchema = z
         "Dùng liên kết HTTPS Google Maps hợp lệ.",
       ),
   })
+  .refine((v) => v.location_method !== "url" || Boolean(v.maps_url), {
+    path: ["maps_url"],
+    message: "Nhập liên kết Google Maps.",
+  })
+  .refine(
+    (v) =>
+      v.location_method !== "place" ||
+      /^[A-Za-z0-9_-]{5,255}$/.test(v.place_id),
+    { path: ["place_id"], message: "Nhập Google Place ID hợp lệ." },
+  )
   .refine((v) => Number.isFinite(Date.parse(v.starts_at)), {
     path: ["starts_at"],
     message: "Thời gian bắt đầu không hợp lệ.",
@@ -84,10 +131,15 @@ export function mapLink(
   event: Pick<
     ClubEvent,
     "latitude" | "longitude" | "maps_url" | "address" | "place_id"
-  >,
+  > &
+    Pick<ClubEvent, "location_method">,
 ) {
+  if (event.location_method === "place" && event.place_id)
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || "Địa điểm")}&query_place_id=${encodeURIComponent(event.place_id)}`;
   if (event.maps_url && safeMapUrl(event.maps_url))
     return safeMapUrl(event.maps_url)!;
+  if (event.place_id)
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || "Địa điểm")}&query_place_id=${encodeURIComponent(event.place_id)}`;
   const query =
     event.latitude !== null && event.longitude !== null
       ? `${event.latitude},${event.longitude}`
@@ -147,6 +199,7 @@ export const formatDate = (date: string) =>
     timeZone: "Asia/Ho_Chi_Minh",
     dateStyle: "full",
     timeStyle: "short",
+    hourCycle: "h23",
   }).format(new Date(date));
 export const eventYear = (date: string) =>
   new Intl.DateTimeFormat("en", {
@@ -164,6 +217,36 @@ export function availableAlias(name: string, taken: string[]) {
   while (taken.includes(alias)) alias = `${base}-${suffix++}`;
   return alias;
 }
+export const guestAlias = (name: string) =>
+  slug(
+    name.replace(
+      /^(?:(?:thầy|cô|anh|chị|thạc sĩ|ths\.?|ks\.?|đ\/c)\s+)+/giu,
+      "",
+    ),
+  )
+    .slice(0, 80)
+    .replace(/-+$/, "");
 export function invitationUrl(code: string, alias?: string) {
   return `${window.location.origin}${import.meta.env.BASE_URL}${encodeURIComponent(code)}${alias ? `/${encodeURIComponent(alias)}` : ""}`;
+}
+export function invitationLines(
+  code: string,
+  eventId: string,
+  invitations: Invitation[],
+) {
+  const seen = new Set<string>();
+  return invitations
+    .filter(
+      (i) =>
+        i.event_id === eventId &&
+        i.primary_alias &&
+        i.invitation_aliases.some((a) => a.alias === i.primary_alias) &&
+        !seen.has(i.guest_id) &&
+        Boolean(seen.add(i.guest_id)),
+    )
+    .map(
+      (i) =>
+        `${[i.salutation, i.name].filter(Boolean).join(" ")}: ${invitationUrl(code, i.primary_alias)}`,
+    )
+    .join("\n");
 }
