@@ -348,3 +348,47 @@ it("enforces icon whitelist while preserving Draft visibility and nonadmin guard
     await pg.exec("reset role");
   }
 });
+
+it("reviews icon migration rollback, repeated application, ACL and actual RLS paths", async () => {
+  const migration = readFileSync("supabase/migrations/202611060001_agenda_icon_library.sql", "utf8");
+  const pre = (await pg.query<{ agenda_icons_preflight: { agenda: { row_fingerprint: string }; rpc_overloads: unknown[] } }>(readFileSync("supabase/agenda-icons-preflight.sql", "utf8"))).rows[0].agenda_icons_preflight;
+  expect(pre.rpc_overloads).toHaveLength(0);
+  await expect(pg.exec(migration.replace(/commit;\s*$/i, "select 1/0; commit;"))).rejects.toThrow();
+  await pg.exec("rollback");
+  const rollback = (await pg.query<{ agenda_icons_preflight: typeof pre }>(readFileSync("supabase/agenda-icons-preflight.sql", "utf8"))).rows[0].agenda_icons_preflight;
+  expect(rollback).toEqual(pre);
+  await pg.exec(migration);
+  const post = (await pg.query<{ agenda_icons_postflight: {
+    constraint: { exact_allowlist: boolean; validated: boolean }; rpc: { owner: string; configuration: string[]; security_definer: boolean; anon_execute: boolean; authenticated_execute: boolean; public_execute: boolean; return_type: string; other_execute_grantees: string[] }; agenda_row_fingerprint: string; agenda_rls: boolean; capability_result: string[];
+  } }>(readFileSync("supabase/agenda-icons-postflight.sql", "utf8"))).rows[0].agenda_icons_postflight;
+  expect(post.constraint).toMatchObject({ exact_allowlist: true, validated: true });
+  expect(post.rpc).toMatchObject({ security_definer: false, anon_execute: false, authenticated_execute: true, public_execute: false, return_type: "text[]" });
+  const owner = (await pg.query<{ current_user: string }>("select current_user")).rows[0].current_user;
+  expect(post.rpc.owner).toBe(owner);
+  expect(post.rpc.configuration).toEqual(['search_path=""']);
+  expect(post.rpc.other_execute_grantees).toEqual([]);
+  expect(post.capability_result).toHaveLength(11);
+  expect(post.agenda_rls).toBe(true);
+  expect(post.agenda_row_fingerprint).toBe(pre.agenda.row_fingerprint);
+  await pg.exec(migration);
+  const repeated = (await pg.query<{ agenda_icons_postflight: typeof post }>(readFileSync("supabase/agenda-icons-postflight.sql", "utf8"))).rows[0].agenda_icons_postflight;
+  expect(repeated).toEqual(post);
+  await pg.exec("set role anon");
+  try { await expect(pg.query("select public.agenda_icon_capabilities()")).rejects.toThrow("permission denied"); }
+  finally { await pg.exec("reset role"); }
+  await pg.query("select set_config('request.jwt.claim.sub',$1,false)", ["20000000-0000-4000-8000-000000000002"]);
+  await pg.exec("set role authenticated");
+  try {
+    expect((await pg.query("select public.agenda_icon_capabilities()")).rows).toHaveLength(1);
+    expect((await pg.query("update public.event_agenda_items set icon='film' returning id")).rows).toHaveLength(0);
+    await expect(pg.query("select save_event($1,$2)", [JSON.stringify(payload), [guest]])).rejects.toThrow("Admin required");
+  } finally { await pg.exec("reset role"); }
+  await pg.query("select set_config('request.jwt.claim.sub',$1,false)", [admin]);
+  const current = (await pg.query<{ v: Record<string, unknown>; updated_at: string }>("select public.event_payload_v110(e) v,e.updated_at from public.events e where id=$1", [event.id])).rows[0];
+  const agenda = (current.v.agenda as Record<string, unknown>[]).map((item) => ({ ...item, icon: "film" }));
+  await pg.exec("set role authenticated");
+  try {
+    const saved = await pg.query<{ e: { agenda: { icon: string }[] } }>("select save_event($1,$2,$3,$4) e", [JSON.stringify({ ...current.v, agenda }), [guest], event.id, current.updated_at]);
+    expect(saved.rows[0].e.agenda[0].icon).toBe("film");
+  } finally { await pg.exec("reset role"); }
+}, 30000);

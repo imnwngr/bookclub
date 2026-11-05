@@ -34,6 +34,7 @@ export interface Guest {
   description: string;
   kind: "individual" | "group";
   active: boolean;
+  display_order?: number;
 
   primary_alias?: string;
 }

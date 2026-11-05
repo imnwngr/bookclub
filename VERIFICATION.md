@@ -1,3 +1,11 @@
+## RELEASE v1.1.0 — DEPLOYED, PRODUCTION SMOKE NOT RUN
+
+Commit release: 51417bd2254485654e3f80718895cb974a8e9489 trên main; push fast-forward, origin/main xác minh khớp. GitHub Actions Verify and deploy BookClub run 41980971297: verify success, deploy success, head SHA khớp commit. URL: https://imnwngr.github.io/bookclub/.
+
+Người dùng sau đó chỉ dẫn không cần kiểm thử production. Vì vậy production smoke/UI/Auth/CRUD/thiệp/mobile sau deploy NOT RUN; không suy ra PASS từ CI hoặc nghiệm thu local trước đó. Không tạo fixture production trong lượt release, cleanup không cần. Không chạy migration/rebuild.
+
+Báo cáo này là thay đổi local sau commit release, chưa được commit/push; hai helper CDP tạm cũng còn untracked. Không tạo thêm commit vì yêu cầu một commit release.
+
 ## FIX RELEASE BLOCKERS — staged review
 
 - BLOCKER 1 FIXED: README mô tả production đã clean rebuild/refinement; phân biệt SQL lịch sử, rebuild đã chạy, refinement đã chạy và audit; không hướng dẫn chạy chuỗi migration cũ trên production. Tài liệu lịch sử gắn nhãn; REBUILD là destructive đã thực thi, không dùng setup thông thường. Setup project mới phải review baseline/refinement phù hợp riêng và cấp admin qua UUID runtime.
@@ -560,6 +568,21 @@ Fixture: qa-ui-4e037cae-8395-4ba1-b123-1cc67475fc28
 - LIVE PASS: desktop and 320px live UI / scroll both directions / no horizontal overflow
 - LIVE PASS: cleanup UI deleted only fixture UUID (event/image cleanup flow)
 
+## UI Overhaul Phase 1 — kiểm thử local 2026-11-05
+
+- TypeScript, ESLint, production build: PASS local. Build cảnh báo chunk trên 500 kB.
+- Vitest: 72/72 PASS, gồm kiểm tra component và PGlite PostgreSQL local; sau mở rộng kiểm thử bàn phím và 11 giá trị SQL, hai file liên quan 3/3 PASS.
+- Playwright: 14/14 PASS trên desktop/mobile, dùng API mock; trường hợp compact editor và bàn phím có viewport 320px. Các kiểm thử lưu/reload này không chứng minh persistence Supabase live.
+- Migration icon `202611060001_agenda_icon_library.sql`: PASS trên PGlite với constraint cũ, dữ liệu cũ, cả 11 mã mới và ACL RPC; chưa áp dụng production. Frontend chặn lưu mã mới nếu capability RPC chưa có.
+- LIVE persistence cho 8 mã icon mới: BLOCKED cho tới khi migration được phê duyệt, áp dụng và kiểm thử riêng. Không có thay đổi database production trong giai đoạn này.
+
+## Danh bạ khách mời — kiểm thử local 2026-11-05
+
+- TypeScript, ESLint, build: PASS. Vitest liên quan: 4/4 PASS gồm PGlite cho thứ tự, phân quyền và xung đột ghi.
+- Playwright desktop/mobile: 6/6 MOCK PASS; bao gồm chế độ danh sách, autosave/rollback, giữ dữ liệu chưa lưu, lưu chỉnh sửa, reorder chuột/bàn phím/touch giả lập, reload/rollback và sticky với viewport thấp. Hai trường hợp mới sau bổ sung kiểm tra lưu thông tin chạy lại 2/2 PASS.
+- Migration `202611060002_guest_order.sql` chưa áp dụng; persistence và Auth/RLS Supabase live là BLOCKED chờ review/phê duyệt. Chưa có LIVE PASS cho đợt này.
+- Sau khi chuyển sang dnd-kit: TypeScript/ESLint/build PASS; Vitest liên quan 4/4 PASS; Playwright desktop/mobile 6/6 MOCK PASS, kiểm tra DragOverlay, placeholder, transition 180 ms, reduced motion, keyboard/mouse/touch, giữ form và rollback. Auto-scroll được bật trong dnd-kit nhưng chưa có kiểm thử tự động riêng cho cuộn sát mép.
+
 ## Live UI acceptance 2026-11-05T04:19:52.821Z
 Fixture: qa-ui-13a6e1e6-3979-4cbf-b7b1-44ce0d9a1181
 
@@ -574,3 +597,27 @@ Fixture: qa-ui-13a6e1e6-3979-4cbf-b7b1-44ce0d9a1181
 - LIVE PASS: anonymous Published invitation / roles before-after / hierarchy / calendar / decoded image / highlighted icon timeline
 - LIVE PASS: desktop and 320px live UI / scroll both directions / no horizontal overflow
 - LIVE PASS: cleanup UI deleted only fixture UUID (event/image cleanup flow)
+
+
+## Revised migration after production preflight — local verification
+
+The previous NEEDS FIX findings are superseded for source implementation only.
+- Sequence removed entirely. Existing frontend contract remains display_order (integer); no nextval grants.
+- Database BEFORE INSERT statement trigger acquires transaction advisory lock (194827,110); row trigger assigns max(display_order)+1. Reorder and all guest writes use the same lock. Lock is held through transaction end.
+- Deferred unique constraint allows swaps; reorder validates expected full order and complete unique ID membership. Stale writes fail with 40001.
+- Only guests' touch_updated_at trigger is replaced with a guest-specific function: content changes update timestamp; order-only writes restore OLD.updated_at. Shared function and alias trigger are unchanged. Repository rebuild definitions were inspected; live definitions must still match preflight.
+- Table ACL and RLS are not altered. Reorder is SECURITY DEFINER with empty search_path, authenticated EXECUTE only and runtime is_admin check. Trigger helpers have no PUBLIC/anon/authenticated EXECUTE. Execute migration as postgres so helper owner is postgres.
+- Re-entry is fail-closed, not a successful no-op: existing column causes transaction failure; issue ROLLBACK if SQL client retains the failed transaction. Do not re-run after COMMIT.
+- Postflight full fingerprint removes only display_order, matching original preflight; content fingerprint also excludes updated_at. Compare all four fingerprints and timestamps against private baseline, plus 14 rows, no null/duplicate positions and original deterministic order. No production names/UUIDs are recorded here.
+
+Evidence: focused PGlite test 1/1 PASS with 14 synthetic rows (10 tied timestamps), rollback injection, backfill timestamp preservation, reorder timestamp preservation, data/snapshot fingerprints, malformed/stale reorder rejection, ACL checks, failed second application, admin append and stable order on edit. ESLint PASS; diff check PASS (line-ending warnings only).
+
+Limitations: PGlite does not establish multi-connection locking behavior. No native PostgreSQL multi-connection concurrency test or live frontend save/reload was performed. Production is unchanged; migration and postflight await review. Final gate: BLOCKED on real concurrency evidence before unconditional SAFE TO APPLY. UI persistence remains MIGRATION PENDING.
+
+
+## Production authorization received — execution pending
+User authorized public Guest Order migration and waived pre-deployment concurrency testing. Earlier sequence/timestamp concerns are no longer approval blockers. Current reviewed migration uses display_order integer, no sequence, and preserves timestamps for order-only writes; do not substitute the historical sequence version. No PostgreSQL execution connector or configured SQL connection is available to this session. Production migration has NOT been executed by the agent; current row count, fingerprints and RPC status remain unverified. Run read-only guest-order-preflight.sql in project trdofhdspbkwgernwybp, save JSON privately, run migrations/202611060002_guest_order.sql as postgres, then guest-order-postflight.sql. On any migration error stop; if transaction remains aborted issue ROLLBACK only. Do not rerun after successful COMMIT. Compare current pre/post fingerprints and count; historical baseline alone does not prove current data unchanged. No install, QA schema, Agenda Icon migration, commit, push or deploy is authorized in this step.
+
+
+## UI Overhaul release — current database status (2026-11-06)
+User confirms Guest Order and Agenda Icon Library migrations APPLIED & POSTFLIGHT VERIFIED, and successful persistence of new icons in production. This supersedes earlier migration-pending/blocker entries retained as historical evidence. These are USER-REPORTED production results, not an independent SQL execution by this agent. No migration is to be rerun. Release includes Agenda segmented time inputs and Lucide icons, plus dnd-kit guest directory and persistent ordering. Production UI smoke remains pending deployment.

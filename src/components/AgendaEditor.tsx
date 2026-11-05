@@ -1,4 +1,5 @@
-import { AgendaIcon, agendaIcons } from "./AgendaIcon";
+import { AgendaIcon } from "./AgendaIcon";
+import { agendaIcons, canonicalAgendaIcon } from "../lib/agendaIcons";
 import type { AgendaItem } from "../types/domain";
 import { Switch } from "./Switch";
 import { RangePicker } from "./RangePicker";
@@ -39,6 +40,7 @@ function Item({
         end={item.end_time ?? ""}
         onStart={(time) => onChange({ time })}
         onEnd={(end_time) => onChange({ end_time })}
+        onRange={(time, end_time) => onChange({ time, end_time })}
       />
       <div className="agenda-content-row">
         <div className="agenda-icon-control">
@@ -65,15 +67,15 @@ function Item({
                   <button
                     type="button"
                     key={name}
-                    aria-pressed={(item.icon ?? "book") === name}
+                    aria-pressed={canonicalAgendaIcon(item.icon) === name}
                     aria-label={`Mốc ${index + 1}: ${icon.label}`}
+                    title={icon.label}
                     onClick={() => {
                       onChange({ icon: name });
                       setIcons(false);
                     }}
                   >
                     <AgendaIcon name={name} />
-                    <span>{icon.label}</span>
                   </button>
                 ))}
               </div>

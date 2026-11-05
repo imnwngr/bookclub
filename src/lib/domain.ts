@@ -1,4 +1,4 @@
-import { agendaIcons } from "../components/AgendaIcon";
+import { isAgendaIcon } from "./agendaIcons";
 import { z } from "zod";
 import type { ClubEvent, Invitation } from "../types/domain";
 export const reservedCodes = [
@@ -70,7 +70,7 @@ export const eventSchema = z
               .optional(),
             icon: z
               .string()
-              .refine((v) => v in agendaIcons, "Icon không hợp lệ.")
+              .refine(isAgendaIcon, "Icon không hợp lệ.")
               .nullable()
               .optional(),
             description: z

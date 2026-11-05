@@ -148,6 +148,13 @@ function EventEditor({
       <h1>{event ? "Chỉnh sửa sự kiện" : "Thêm sự kiện"}</h1>
       <form
         noValidate
+        onSubmitCapture={(e) => {
+          if (e.currentTarget.querySelector('[data-time-invalid="true"]')) {
+            e.preventDefault();
+            e.stopPropagation();
+            toast.error("Vui lòng hoàn tất giờ hợp lệ trước khi lưu.");
+          }
+        }}
         onSubmit={handleSubmit(async (values) => {
           if (event && !values.code) {
             form.setError("code", {

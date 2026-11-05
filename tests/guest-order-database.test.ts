@@ -1,0 +1,75 @@
+// @vitest-environment node
+import { PGlite } from "@electric-sql/pglite";
+import { readFileSync } from "node:fs";
+import { expect, it } from "vitest";
+
+it("backfills deterministically, restricts reorder and rejects stale writes", async () => {
+  const pg = new PGlite();
+  try {
+    await pg.exec(`create role anon; create role authenticated;
+      create function public.is_admin() returns boolean language sql stable as $$select coalesce(current_setting('test.admin',true),'')='yes'$$;
+      create table public.guests(id uuid primary key, created_at timestamptz not null, name text not null default 'Guest', updated_at timestamptz not null default now());
+      create table public.event_guests(id uuid primary key, guest_id uuid references public.guests(id));
+      create table public.invitation_aliases(id uuid primary key);
+      create function public.touch_guest() returns trigger language plpgsql as $$begin new.updated_at=clock_timestamp(); return new; end$$;
+      create trigger touch_updated_at before update on public.guests for each row execute function public.touch_guest();
+      alter table public.guests enable row level security;
+      grant select,insert,update,delete on public.guests to authenticated;
+      create policy admin_guests on public.guests for all to authenticated using(public.is_admin()) with check(public.is_admin());
+      insert into public.guests(id,created_at) values ('00000000-0000-4000-8000-000000000002','2026-01-01'),('00000000-0000-4000-8000-000000000001','2026-01-01');`);
+    await pg.exec("insert into guests(id,created_at) select ('00000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid, case when n<=10 then '2026-01-01'::timestamptz else '2026-01-01'::timestamptz+n*interval '1 day' end from generate_series(3,14) n");
+    const preSql = readFileSync("supabase/guest-order-preflight.sql", "utf8"), postSql = readFileSync("supabase/guest-order-postflight.sql", "utf8");
+    const pre = (await pg.query<{guest_order_preflight: {guest_content_fingerprint:string;current_order:unknown[];event_guests_fingerprint:string;aliases_fingerprint:string}}>(preSql)).rows[0].guest_order_preflight;
+    const updatedBefore = (await pg.query("select id,updated_at from guests order by id")).rows;
+    const migration = readFileSync("supabase/migrations/202611060002_guest_order.sql", "utf8");
+    await expect(pg.exec(migration.replace(/commit;\s*$/i,"select 1/0; commit;"))).rejects.toThrow();
+    await pg.exec("rollback");
+    expect((await pg.query<{guest_order_preflight: typeof pre}>(preSql)).rows[0].guest_order_preflight).toEqual(pre);
+    await pg.exec(migration);
+    const post = (await pg.query<{guest_order_postflight:{guest_content_fingerprint:string;event_guests_fingerprint:string;aliases_fingerprint:string;backfill_matches_original_order:boolean;null_order_count:number;duplicate_order_groups:number; functions:{signature:string;owner:string;security_definer:boolean;search_path:string[];public_execute:boolean;anon_execute:boolean;authenticated_execute:boolean}[];sequence:{authenticated_usage:boolean;authenticated_select:boolean}}}>(postSql)).rows[0].guest_order_postflight;
+    expect(post.guest_content_fingerprint).toBe(pre.guest_content_fingerprint);
+    expect(post.event_guests_fingerprint).toBe(pre.event_guests_fingerprint);
+    expect(post.aliases_fingerprint).toBe(pre.aliases_fingerprint);
+    expect(post.backfill_matches_original_order).toBe(true);
+    expect(post.null_order_count).toBe(0); expect(post.duplicate_order_groups).toBe(0);
+    const owner = (await pg.query<{current_user:string}>("select current_user")).rows[0].current_user;
+    expect(post.functions.find(f=>f.signature.startsWith("reorder_guests("))).toMatchObject({owner,security_definer:true,search_path:['search_path=""'],public_execute:false,anon_execute:false,authenticated_execute:true});
+    expect(post.functions.find(f=>f.signature.startsWith("guest_order_available("))).toMatchObject({owner,security_definer:false,search_path:['search_path=""'],public_execute:false,anon_execute:false,authenticated_execute:true});
+    expect(post.sequence).toBeNull();
+    expect((await pg.query("select id,updated_at from guests order by id")).rows).toEqual(updatedBefore);
+    const ids = (await pg.query<{ id: string }>("select id from guests order by display_order,id")).rows.map(x=>x.id);
+    expect(ids).toHaveLength(14);
+    await expect(pg.exec(migration)).rejects.toThrow();
+    await pg.exec("rollback");
+    expect((await pg.query("select id,updated_at from guests order by id")).rows).toEqual(updatedBefore);
+    expect(ids[0].endsWith("001")).toBe(true);
+    expect((await pg.query<{ allowed: boolean }>("select has_function_privilege('anon','public.reorder_guests(uuid[],uuid[])','execute') allowed")).rows[0].allowed).toBe(false);
+    await pg.exec("set role authenticated");
+    await expect(pg.query("select reorder_guests($1,$2)",[ids,[...ids].reverse()])).rejects.toThrow("Admin required");
+    await expect(pg.query("update public.guests set display_order=99 returning id")).rejects.toThrow("Admin required");
+    await expect(pg.exec("insert into guests(id,created_at) values ('00000000-0000-4000-8000-000000000098',now())")).rejects.toThrow("Admin required");
+    // Sequence privileges are independent of the guest table's RLS and admin check.
+    await expect(pg.query("select nextval('public.guest_display_order_seq')")).rejects.toThrow();
+    await pg.exec("reset role; select set_config('test.admin','yes',false); set role authenticated");
+    await expect(pg.query("select reorder_guests($1,$2)",[ids,[ids[0],ids[0]]])).rejects.toThrow("Invalid guest order");
+    await expect(pg.query("select reorder_guests($1,$2)",[ids,[ids[0]]])).rejects.toThrow("Invalid guest order");
+    await expect(pg.query("select reorder_guests($1,$2)",[ids,[ids[0],null]])).rejects.toThrow("Invalid guest order");
+    await expect(pg.query("select reorder_guests($1,$2)",[ids,[ids[0],"00000000-0000-4000-8000-000000000099"]])).rejects.toThrow("Invalid guest order");
+    await pg.exec(`reset role;
+      create function public.reject_test_update() returns trigger language plpgsql as $$begin if new.id='00000000-0000-4000-8000-000000000001' then raise exception 'fixture failure'; end if; return new; end$$;
+      create trigger reject_test_update before update on public.guests for each row execute function public.reject_test_update();
+      set role authenticated`);
+    await expect(pg.query("select reorder_guests($1,$2)",[ids,[...ids].reverse()])).rejects.toThrow("fixture failure");
+    expect((await pg.query<{id:string}>("select id from guests order by display_order,id")).rows.map(x=>x.id)).toEqual(ids);
+    await pg.exec("reset role; drop trigger reject_test_update on public.guests; drop function public.reject_test_update(); set role authenticated");
+    await pg.query("select reorder_guests($1,$2)",[ids,[...ids].reverse()]);
+    await expect(pg.query("select reorder_guests($1,$2)",[ids,ids])).rejects.toThrow("Guest order changed");
+    expect((await pg.query("select id,updated_at from guests order by id")).rows).toEqual(updatedBefore);
+    await pg.query("update guests set name='Edited' where id=$1",[ids[0]]);
+    expect((await pg.query<{id:string}>("select id from guests order by display_order,id")).rows.map(x=>x.id)).toEqual([...ids].reverse());
+    await pg.exec("reset role");
+    await pg.exec("set role authenticated; insert into guests(id,created_at) values ('00000000-0000-4000-8000-000000000015','2026-01-01')");
+    const result = (await pg.query<{ id: string }>("select id from guests order by display_order,id")).rows.map(x=>x.id);
+    expect(result).toEqual([...ids].reverse().concat("00000000-0000-4000-8000-000000000015"));
+  } finally { await pg.close(); }
+}, 30000);

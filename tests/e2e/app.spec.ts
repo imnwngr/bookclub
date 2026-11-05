@@ -61,6 +61,7 @@ async function backend(page: Page, admin = false) {
     const path = url.pathname;
     let body: unknown = [];
     if (path.endsWith("/is_admin")) body = admin;
+    else if (path.endsWith("/agenda_icon_capabilities")) body = ["users", "music", "mic", "film", "award", "sparkles", "book-open", "gift", "trophy", "camera", "heart-handshake"];
     else if (path.endsWith("/get_event_v110"))
       body =
         currentEvent.code === route.request().postDataJSON().p_code
@@ -203,9 +204,9 @@ test("admin creation validation and save, selection, deletion confirmation (mock
   await page.getByLabel("Mã sự kiện", { exact: true }).fill("su-kien-moi");
   await page.getByRole("button", { name: "Thời gian sự kiện" }).click();
   await page.getByLabel("Ngày Bắt đầu", { exact: true }).fill("2099-10-20");
-  await page.getByLabel("Giờ Bắt đầu", { exact: true }).selectOption("08");
+  await page.getByLabel("Bắt đầu giờ Thời gian sự kiện").fill("08");
   await page.getByLabel("Ngày Kết thúc", { exact: true }).fill("2099-10-20");
-  await page.getByLabel("Giờ Kết thúc", { exact: true }).selectOption("10");
+  await page.getByLabel("Kết thúc giờ Thời gian sự kiện").fill("10");
   await page
     .getByLabel("Google Maps URL *", { exact: true })
     .fill("https://maps.app.goo.gl/example");
@@ -313,10 +314,11 @@ test("ordinary user denied admin, loading and API error states are explicit (moc
 });
 test("guest directory edits and primary invitation only (mock API)", async ({
   page,
-}) => {
+}, info) => {
   await backend(page, true);
   await page.goto("/bookclub/admin/guests");
-  await page.getByRole("button", { name: "Chỉnh sửa khách mời" }).click();
+  if (info.project.name === "mobile") await page.getByRole("button", {name:"Danh sách khách mời",exact:true}).click();
+  await page.getByRole("button", { name: "Chỉnh sửa khách mời Nguyễn Hoàng Viện" }).click();
   await page.getByLabel("Họ tên hoặc tên nhóm *").fill("Tên được cập nhật");
   const update = page.waitForRequest(
     (r) => r.method() === "PATCH" && r.url().includes("/guests"),
@@ -463,12 +465,7 @@ test("v1.1 dirty undo covers fields, switch, guest selection and agenda (mock AP
   await page.getByRole("button", { name: "Xóa mốc 1", exact: true }).click();
   await expect(save).toHaveCount(0);
   await page.getByRole("button", { name: "Thời gian sự kiện" }).click();
-  expect(
-    await page
-      .getByLabel("Giờ Bắt đầu", { exact: true })
-      .locator("option")
-      .allTextContents(),
-  ).toHaveLength(24);
+  await expect(page.getByLabel("Bắt đầu giờ Thời gian sự kiện")).toHaveAttribute("inputmode", "numeric");
   await expect(page.getByLabel("Vĩ độ", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Kinh độ", { exact: true })).toHaveCount(0);
   expect(
@@ -479,9 +476,10 @@ test("v1.1 dirty undo covers fields, switch, guest selection and agenda (mock AP
 });
 test("v1.1 directory autosave rollback and selected state (mock API)", async ({
   page,
-}) => {
+}, info) => {
   await backend(page, true);
   await page.goto("/bookclub/admin/guests");
+  if (info.project.name === "mobile") await page.getByRole("button", {name:"Danh sách khách mời",exact:true}).click();
   const toggle = page.getByRole("switch");
   await expect(toggle).toHaveAttribute("aria-checked", "true");
   await page.route("**/rest/v1/guests?**", async (r) => {
@@ -502,9 +500,9 @@ test("v1.1 directory autosave rollback and selected state (mock API)", async ({
     ),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Chỉnh sửa khách mời", exact: true })
+    .getByRole("button", { name: "Chỉnh sửa khách mời Nguyễn Hoàng Viện", exact: true })
     .click();
-  await expect(page.getByText("Đang chỉnh sửa", { exact: true })).toBeVisible();
+  if (info.project.name !== "mobile") await expect(page.getByText("Đang chỉnh sửa", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Alias chính")).toHaveValue("nguyen-hoang-vien");
   await expect(
     page.getByText("Alias gợi ý (phân cách bằng dấu phẩy)"),
@@ -629,9 +627,10 @@ test("v1.1 auto code, Place ID and editable code use correct save payloads (mock
   await page.getByLabel("Tên sự kiện *").fill("Họp Mặt & Chào Đón");
   await page.getByRole("button", { name: "Thời gian sự kiện" }).click();
   await page.getByLabel("Ngày Bắt đầu", { exact: true }).fill("2099-10-20");
-  await page.getByLabel("Giờ Bắt đầu", { exact: true }).selectOption("13");
+  await page.getByLabel("Bắt đầu giờ Thời gian sự kiện").fill("13");
   await page.getByLabel("Ngày Kết thúc", { exact: true }).fill("2099-10-20");
-  await page.getByLabel("Giờ Kết thúc", { exact: true }).selectOption("18");
+  await page.getByLabel("Kết thúc giờ Thời gian sự kiện").fill("18");
+  await page.getByRole("button", { name: "Xong", exact: true }).click();
   await page
     .getByRole("radio", { name: "Google Place ID", exact: true })
     .check();
@@ -762,9 +761,7 @@ test("refinement venue cards and range/icon editor persist the save payload and 
   await page.getByLabel("Google Place ID *", { exact: true }).fill("ChIJ12345");
   await page.getByRole("button", { name: "Thêm mốc thời gian" }).click();
   await page.getByLabel("Nội dung mốc 1", { exact: true }).fill("Đón tiếp");
-  await page.getByRole("button", { name: "Khoảng giờ mốc 1" }).click();
-  await page.getByLabel("Kết thúc", { exact: true }).fill("08:45");
-  await page.getByRole("button", { name: "Xong", exact: true }).click();
+  await page.getByLabel("Kết thúc phút Khoảng giờ mốc 1").fill("45");
   await page.getByRole("button", { name: "Chọn icon mốc 1" }).click();
   await page.getByRole("button", { name: "Mốc 1: Đón tiếp" }).click();
   const request = page.waitForRequest((r) => r.url().endsWith("/save_event"));
@@ -773,7 +770,7 @@ test("refinement venue cards and range/icon editor persist the save payload and 
   expect(payload.agenda[0]).toMatchObject({
     time: "08:00",
     end_time: "08:45",
-    icon: "welcome",
+    icon: "users",
   });
   expect(payload).not.toHaveProperty("invitation_edits");
   await expect(page.getByText("Đã lưu sự kiện", { exact: true })).toBeVisible();
@@ -786,8 +783,8 @@ test("refinement venue cards and range/icon editor persist the save payload and 
   );
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Khoảng giờ mốc 1" }),
-  ).toContainText("08:45");
+    page.getByLabel("Kết thúc phút Khoảng giờ mốc 1"),
+  ).toHaveValue("45");
   await page.getByRole("button", { name: "Chọn icon mốc 1" }).click();
   await expect(
     page.getByRole("button", { name: "Mốc 1: Đón tiếp" }),
@@ -868,25 +865,28 @@ test("compact editor ranges, guest rows, icon picker and multi-day persistence (
   await expect(
     page.getByRole("button", { name: "Thời gian sự kiện" }),
   ).toHaveCount(1);
-  await expect(page.getByLabel("Ngày Bắt đầu", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Ngày Bắt đầu", { exact: true })).toBeHidden();
   await page.getByRole("button", { name: "Thời gian sự kiện" }).click();
   await page.getByLabel("Ngày Bắt đầu", { exact: true }).fill("2099-10-20");
-  await page.getByLabel("Giờ Bắt đầu", { exact: true }).selectOption("18");
   await page.getByLabel("Ngày Kết thúc", { exact: true }).fill("2099-10-21");
-  await page.getByLabel("Giờ Kết thúc", { exact: true }).selectOption("20");
+  await page.getByLabel("Bắt đầu giờ Thời gian sự kiện").fill("18");
+  await page.getByLabel("Kết thúc giờ Thời gian sự kiện").fill("20");
   await page.getByRole("button", { name: "Xong", exact: true }).click();
-  await expect(page.getByLabel("Ngày Bắt đầu", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Ngày Bắt đầu", { exact: true })).toBeHidden();
   await page.getByRole("button", { name: "Thêm mốc thời gian" }).click();
   await expect(
-    page.getByRole("button", { name: "Khoảng giờ mốc 1" }),
+    page.getByRole("group", { name: "Khoảng giờ mốc 1" }).last(),
   ).toHaveCount(1);
   await expect(page.getByRole("group", { name: "Icon mốc 1" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Khoảng giờ mốc 1" }).click();
-  await page.getByLabel("Bắt đầu", { exact: true }).fill("18:00");
-  await page.getByLabel("Kết thúc", { exact: true }).fill("20:00");
-  await page.getByRole("button", { name: "Xong", exact: true }).click();
+  await page.getByLabel("Bắt đầu giờ Khoảng giờ mốc 1").fill("18");
+  await page.getByLabel("Bắt đầu phút Khoảng giờ mốc 1").fill("00");
+  await page.getByLabel("Kết thúc giờ Khoảng giờ mốc 1").fill("20");
+  await page.getByLabel("Kết thúc phút Khoảng giờ mốc 1").fill("00");
   await page.getByLabel("Nội dung mốc 1").fill("Chương trình");
   await page.getByRole("button", { name: "Chọn icon mốc 1" }).click();
+  const iconGrid = page.getByRole("group", { name: "Icon mốc 1" });
+  await expect(iconGrid.getByRole("button")).toHaveCount(11);
+  expect(await iconGrid.innerText()).toBe("");
   await page.getByRole("button", { name: "Mốc 1: Đón tiếp" }).click();
   await expect(
     page
@@ -914,7 +914,7 @@ test("compact editor ranges, guest rows, icon picker and multi-day persistence (
   expect(payload.agenda[0]).toMatchObject({
     time: "18:00",
     end_time: "20:00",
-    icon: "welcome",
+    icon: "users",
   });
   await page.route("**/rest/v1/rpc/get_event_v110", (r) =>
     r.fulfill({
@@ -925,8 +925,146 @@ test("compact editor ranges, guest rows, icon picker and multi-day persistence (
   );
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Khoảng giờ mốc 1" }),
-  ).toContainText("18:00 – 20:00");
+    page.getByLabel("Bắt đầu giờ Khoảng giờ mốc 1"),
+  ).toHaveValue("18");
+  await expect(page.getByLabel("Kết thúc giờ Khoảng giờ mốc 1")).toHaveValue("20");
+});
+test("segmented agenda keyboard, paste and invalid values (mock API)", async ({ page }, info) => {
+  if (info.project.name === "mobile") await page.setViewportSize({ width: 320, height: 720 });
+  await backend(page, true);
+  await page.goto("/bookclub/admin/edit/102026");
+  await page.getByRole("button", { name: "Thêm mốc thời gian" }).click();
+  const a = page.getByLabel("Bắt đầu giờ Khoảng giờ mốc 1");
+  const b = page.getByLabel("Bắt đầu phút Khoảng giờ mốc 1");
+  const c = page.getByLabel("Kết thúc giờ Khoảng giờ mốc 1");
+  const d = page.getByLabel("Kết thúc phút Khoảng giờ mốc 1");
+  await a.click(); await page.keyboard.type("16"); await expect(b).toBeFocused();
+  await page.keyboard.type("00"); await expect(c).toBeFocused();
+  await page.keyboard.type("16"); await expect(d).toBeFocused();
+  await page.keyboard.type("15");
+  await d.press("ArrowLeft"); await expect(c).toBeFocused();
+  await c.press("ArrowRight"); await expect(d).toBeFocused();
+  await a.click(); await a.fill("99");
+  await expect(page.getByText("Nhập đủ giờ 00–23 và phút 00–59.")).toBeVisible();
+  await a.evaluate((el) => {
+    const data = new DataTransfer(); data.setData("text/plain", "17:30 - 18:15");
+    el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(a).toHaveValue("17"); await expect(b).toHaveValue("30");
+  await expect(c).toHaveValue("18"); await expect(d).toHaveValue("15");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+test("guest directory compact/full, dirty guard, reorder and reload (mock API)", async ({ page }, info) => {
+  if (info.project.name === "mobile") await page.setViewportSize({ width: 320, height: 720 });
+  await backend(page, true);
+  let rows = Array.from({ length: 14 }, (_, i) => ({ ...guest, id: `guest-${i}`, name: `Khách ${i}`, description: `Vai trò ${i}, Bộ phận ${i}`, primary_alias: `khach-${i}`, display_order: i + 1 }));
+  let denyReorder = false;
+  await page.route("**/rest/v1/rpc/guest_order_available", r => r.fulfill({ status: 200, contentType:"application/json", body:"true" }));
+  await page.route("**/rest/v1/rpc/reorder_guests", async r => {
+    if (denyReorder) { await r.fulfill({status:409,contentType:"application/json",body:JSON.stringify({code:"40001",message:"Guest order changed"})}); return; }
+    const body = r.request().postDataJSON(), byId = new Map(rows.map(row => [row.id, row]));
+    rows = body.p_order.map((id: string, index: number) => ({ ...byId.get(id)!, display_order: index + 1 }));
+    await r.fulfill({ status:200, contentType:"application/json", body:"null" });
+  });
+  await page.route("**/rest/v1/guests?**", async r => {
+    if (r.request().method() === "PATCH") {
+      const id = new URL(r.request().url()).searchParams.get("id")?.replace("eq.", "");
+      rows = rows.map(g => g.id === id ? { ...g, ...r.request().postDataJSON() } : g);
+      const row = rows.find(g => g.id === id)!;
+      await r.fulfill({ status:200, contentType:"application/json", body:JSON.stringify(r.request().url().includes("select=") ? { id:row.id, active:row.active } : []) });
+    } else await r.fulfill({ status:200, contentType:"application/json", body:JSON.stringify(rows) });
+  });
+  await page.goto("/bookclub/admin/guests");
+  if (info.project.name === "mobile") await page.getByRole("button", { name:"Danh sách khách mời", exact:true }).click();
+  if (info.project.name === "desktop") {
+    await page.setViewportSize({width:1280,height:600});
+    await expect(page.getByText("14 khách mời")).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 380));
+    await expect.poll(async () => (await page.locator(".directory-editor").boundingBox())?.y ?? 999).toBeLessThan(30);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
+  await page.screenshot({path:`test-results/guest-directory-${info.project.name}.png`});
+  await expect(page.getByText("Vai trò 0", {exact:true})).toHaveCount(0);
+  await page.getByRole("button", {name:"Đầy đủ"}).click(); await expect(page.getByText("Vai trò 0",{exact:true})).toBeVisible();
+  await page.getByRole("switch", {name:"Đang hoạt động: Khách 0"}).click();
+  await expect(page.getByRole("switch", {name:"Ngừng hoạt động: Khách 0"})).toHaveAttribute("aria-checked","false");
+  await page.getByRole("button", {name:"Thu gọn"}).click();
+  await page.getByRole("button", {name:"Chỉnh sửa khách mời Khách 0"}).click();
+  await page.getByLabel("Họ tên hoặc tên nhóm *").fill("Tên chưa lưu");
+  if (info.project.name === "mobile") await page.getByRole("button", { name:"Danh sách khách mời", exact:true }).click();
+  await page.getByRole("button", {name:"Chỉnh sửa khách mời Khách 1", exact:true}).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button",{name:"Tiếp tục chỉnh sửa"}).click();
+  await expect(page.getByLabel("Họ tên hoặc tên nhóm *")).toHaveValue("Tên chưa lưu");
+  if (info.project.name === "mobile") await page.getByRole("button",{name:"Đóng",exact:true}).click();
+  await page.getByRole("button",{name:"Hủy thay đổi"}).click();
+  await page.getByLabel("Chức vụ / mô tả").fill("Thông tin đã sửa");
+  await page.getByRole("button",{name:"Lưu khách mời"}).click();
+  await expect(page.getByText("Đã lưu khách mời",{exact:true})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Đang chỉnh sửa: Khách 0"})).toBeVisible();
+  await page.getByLabel("Chức vụ / mô tả").fill("Bản nháp đang chỉnh sửa");
+  if (info.project.name === "mobile") await page.getByRole("button",{name:"Danh sách khách mời",exact:true}).click();
+  await expect(page.locator("[data-guest-row]").first()).toHaveAttribute("data-guest-row","guest-0");
+  const handle = page.getByRole("button",{name:"Sắp xếp Thầy ThS. Khách 0"});
+  await handle.focus(); await page.keyboard.press("Space");
+  await expect(page.locator(".directory-row.is-placeholder")).toHaveCount(1);
+  await expect(page.locator(".directory-drag-overlay")).toBeVisible();
+  await expect(page.locator('[data-guest-row="guest-1"]')).toHaveCSS("transition-duration", "0.18s");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("status").filter({hasText:"was moved over droppable area guest-1"})).toBeAttached();
+  await page.keyboard.press("Space");
+  await expect(page.getByText("Đã lưu thứ tự khách mời")).toBeVisible();
+  await expect(page.locator("[data-guest-row]").first()).toHaveAttribute("data-guest-row","guest-1");
+  await expect(page.getByRole("button",{name:"Sắp xếp Thầy ThS. Khách 0"})).toBeEnabled();
+  await expect(page.locator(".directory-drag-overlay")).toHaveCount(0);
+  if (info.project.name === "desktop") {
+    const source = await page.locator('[data-guest-row="guest-0"] .directory-grip').boundingBox();
+    const target = await page.locator('[data-guest-row="guest-3"]').boundingBox();
+    if (!source || !target) throw Error("Missing drag targets");
+    await page.mouse.move(source.x+source.width/2, source.y+source.height/2); await page.mouse.down();
+    await page.mouse.move(source.x+source.width/2,source.y+source.height/2+10);
+    await expect(page.locator(".directory-drag-overlay")).toBeVisible(); await expect(page.locator(".is-placeholder")).toHaveCount(1);
+    await page.mouse.move(target.x+target.width/2, target.y+target.height/2, {steps:8});
+    await expect(page.getByRole("status").filter({hasText:"was moved over droppable area guest-3"})).toBeAttached();
+    await page.mouse.up();
+    await expect.poll(() => rows[3].id).toBe("guest-0");
+  } else {
+    const source = await page.locator('[data-guest-row="guest-0"] .directory-grip').boundingBox();
+    const target = await page.locator('[data-guest-row="guest-3"]').boundingBox();
+    if (!source || !target) throw Error("Missing touch targets");
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", {type:"touchStart",touchPoints:[{x:source.x+source.width/2,y:source.y+source.height/2}]});
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    await cdp.send("Input.dispatchTouchEvent", {type:"touchMove",touchPoints:[{x:source.x+source.width/2,y:source.y+source.height/2+25}]});
+    await expect(page.locator(".directory-drag-overlay")).toBeVisible();
+    await cdp.send("Input.dispatchTouchEvent", {type:"touchMove",touchPoints:[{x:source.x+source.width/2,y:target.y+target.height/2}]});
+    await expect(page.getByRole("status").filter({hasText:"was moved over droppable area guest-3"})).toBeAttached();
+    await cdp.send("Input.dispatchTouchEvent", {type:"touchEnd",touchPoints:[]});
+    await expect.poll(() => rows.findIndex(g => g.id === "guest-0")).toBeGreaterThan(1);
+    await cdp.detach();
+  }
+  await expect(page.getByLabel("Chức vụ / mô tả")).toHaveValue("Bản nháp đang chỉnh sửa");
+  await expect(page.getByRole("switch",{name:"Ngừng hoạt động: Khách 0"})).toHaveAttribute("aria-checked","false");
+  denyReorder = true;
+  const before = rows.map(g => g.id);
+  const failingHandle = page.getByRole("button",{name:"Sắp xếp Thầy ThS. Khách 0"});
+  await failingHandle.focus(); await page.keyboard.press("Space"); await expect(page.locator(".is-placeholder")).toHaveCount(1);
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("status").filter({hasText:`was moved over droppable area ${before[before.indexOf("guest-0")-1]}`})).toBeAttached();
+  const rejected = page.waitForResponse(r => r.url().endsWith("/reorder_guests") && r.status() === 409);
+  await page.keyboard.press("Space");
+  await rejected;
+  await expect.poll(async () => page.locator("[data-guest-row]").evaluateAll(els => els.map(el => el.getAttribute("data-guest-row")))).toEqual(before);
+  denyReorder = false;
+  await page.reload();
+  if (info.project.name === "mobile") await page.getByRole("button",{name:"Danh sách khách mời",exact:true}).click();
+  await expect(page.locator("[data-guest-row]").first()).toHaveAttribute("data-guest-row","guest-1");
+  await page.emulateMedia({reducedMotion:"reduce"});
+  await page.getByRole("button",{name:"Sắp xếp Thầy ThS. Khách 1",exact:true}).focus(); await page.keyboard.press("Space");
+  await expect(page.locator(".directory-drag-overlay")).toHaveCSS("transform","none");
+  await expect(page.locator('[data-guest-row="guest-1"]')).toHaveCSS("transition-duration","0s");
+  await page.keyboard.press("Escape");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test("compact invitation name dominates tagline while roles remain before and after opening (mock API)", async ({
   page,

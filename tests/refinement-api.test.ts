@@ -27,3 +27,22 @@ it("does not silently drop ranges/icons when the production upgrade is not appli
   ).rejects.toThrow("Database chưa hỗ trợ");
   expect(mocks.rpc).not.toHaveBeenCalled();
 });
+it("blocks new icon values before sending save_event until the capability exists", async () => {
+  mocks.rpc.mockReset();
+  mocks.rpc.mockResolvedValue({ data: null, error: { code: "PGRST202" } });
+  const event = { agenda: [{ time: "08:00", end_time: "09:00", icon: "film", description: "Test", highlight: false }] } as Parameters<typeof saveEvent>[0];
+  await expect(saveEvent(event, [])).rejects.toThrow("Database chưa hỗ trợ icon mới");
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  expect(mocks.rpc).toHaveBeenCalledWith("agenda_icon_capabilities");
+});
+it("sends new icons only after capability confirms them and keeps legacy values usable", async () => {
+  mocks.rpc.mockReset(); mocks.limit.mockResolvedValue({ error: null });
+  mocks.rpc.mockImplementation(async (name: string) => name === "agenda_icon_capabilities"
+    ? { data: ["film"], error: null } : { data: { id: "event-test" }, error: null });
+  const agenda = [{ time: "08:00", end_time: "09:00", icon: "film", description: "Test", highlight: false }];
+  await saveEvent({ agenda } as Parameters<typeof saveEvent>[0], []);
+  expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["agenda_icon_capabilities", "save_event"]);
+  mocks.rpc.mockClear();
+  await saveEvent({ agenda: [{ ...agenda[0], icon: "welcome" }] } as Parameters<typeof saveEvent>[0], []);
+  expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["save_event"]);
+});

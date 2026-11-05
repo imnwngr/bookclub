@@ -7,6 +7,7 @@ import type {
 } from "../../types/domain";
 import { guestAlias } from "../../lib/domain";
 import { discardVenueImage } from "./images";
+import { iconValuesRequiringMigration } from "../../lib/agendaIcons";
 export async function listEvents(admin = false) {
   const events: ClubEvent[] = [];
   for (let offset = 0; ; offset += 500) {
@@ -29,12 +30,22 @@ export async function getEvent(code: string) {
   return data as ClubEvent | null;
 }
 export async function listGuests() {
-  const { data, error } = await db()
+  let { data, error } = await db()
+    .from("guests").select("*").order("display_order").order("id");
+  if (error?.code === "42703" || error?.code === "PGRST204") ({ data, error } = await db()
     .from("guests")
     .select("*")
-    .order("created_at");
+    .order("created_at").order("id"));
   if (error) throw error;
   return data as Guest[];
+}
+export async function reorderGuests(expected: string[], order: string[]) {
+  const { error } = await db().rpc("reorder_guests", { p_expected: expected, p_order: order });
+  if (error) throw error;
+}
+export async function guestOrderAvailable() {
+  const { data, error } = await db().rpc("guest_order_available");
+  return !error && data === true;
 }
 export async function listInvitations(eventId: string) {
   const { data, error } = await db()
@@ -60,6 +71,12 @@ export async function saveEvent(
   guestIds: string[],
   existing?: ClubEvent,
 ) {
+  const newIcons = (event.agenda ?? []).map((item) => item.icon).filter((icon): icon is string => !!icon && iconValuesRequiringMigration.has(icon));
+  if (newIcons.length) {
+    const capability = await db().rpc("agenda_icon_capabilities");
+    if (capability.error || !Array.isArray(capability.data) || newIcons.some((icon) => !capability.data.includes(icon)))
+      throw Error("Database chưa hỗ trợ icon mới. Chưa lưu sự kiện; cần áp dụng migration icon đã được phê duyệt.");
+  }
   if (event.agenda?.some((item) => item.end_time || item.icon)) {
     const capability = await db()
       .from("event_agenda_items")
@@ -103,6 +120,7 @@ export async function saveGuest(guest: Omit<Guest, "id">, id?: string) {
     ...guest,
     primary_alias: guest.primary_alias || guestAlias(guest.name),
   };
+  delete payload.display_order;
   // Active is saved by its independent switch; a directory edit must not overwrite a newer toggle.
   if (id) delete payload.active;
   const query = id

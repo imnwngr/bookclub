@@ -43,12 +43,9 @@ it("edits ranges and icon selection, renumbers after removing a milestone", asyn
     screen.getByRole("button", { name: "Thêm mốc thời gian" }),
   );
   await userEvent.type(screen.getByLabelText("Nội dung mốc 1"), "Đón khách");
-  await userEvent.click(
-    screen.getByRole("button", { name: "Khoảng giờ mốc 1" }),
-  );
-  await userEvent.clear(screen.getByLabelText("Kết thúc"));
-  await userEvent.type(screen.getByLabelText("Kết thúc"), "09:00");
-  await userEvent.click(screen.getByRole("button", { name: "Xong" }));
+  await userEvent.click(screen.getByLabelText("Kết thúc giờ Khoảng giờ mốc 1"));
+  await userEvent.keyboard("09");
+  await userEvent.keyboard("00");
   await userEvent.click(
     screen.getByRole("button", { name: "Chọn icon mốc 1" }),
   );

@@ -171,3 +171,18 @@ Chưa áp dụng v1.1 schema/bucket vào Supabase thật, nên live persistence/
 Trang tham khảo không đọc được qua web tool nhưng HTTP từ local truy cập được, dùng để tìm đúng asset; không tuyên bố sao chép chính xác bố cục động. Không còn thiếu logo sau xác nhận quyền dùng. Chưa tối ưu bundle/SEO/hosting theo phạm vi.
 
 Review migration trước, áp dụng staging sau phê duyệt, chạy UI-ACCEPTANCE-v1.1.md và live Auth/Storage tests, rồi xin phê duyệt release riêng. Không đánh dấu từng mục DONE production chỉ vì local test PASS.
+
+## UI Overhaul Phase 1 — cập nhật local
+
+- Bộ 11 icon Lucide dùng chung cho trình chọn và timeline; mã cũ vẫn được đọc và giữ nguyên khi chưa chọn icon khác.
+- Các segment giờ dùng chung cho chương trình và sự kiện, giữ ngày độc lập và múi giờ Việt Nam. Giá trị chưa hoàn chỉnh không được gửi khi lưu.
+- SQL `supabase/migrations/202611060001_agenda_icon_library.sql` mở rộng CHECK, giữ các mã cũ và thêm RPC kiểm tra capability. **Chưa chạy trên production**. Trước khi gửi một trong tám mã mới, frontend kiểm tra RPC; nếu thiếu hoặc không xác nhận được, thao tác lưu bị chặn với thông báo rõ ràng. Các icon `music`, `gift`, `camera` đã có trong constraint cũ.
+- Kiểm thử migration bằng PGlite là PostgreSQL local mô phỏng roles, không phải xác minh Supabase live. SQL cần được review và phê duyệt riêng trước khi chạy production; sau đó kiểm tra capability, lưu/reload và thiệp qua Supabase thật.
+
+## Danh bạ khách mời — local
+
+Giao diện hai cột, editor sticky, hai chế độ danh sách, drawer mobile và bảo vệ form chưa lưu đã triển khai. Tay nắm sử dụng dnd-kit, DragOverlay, placeholder và sensor chuột, touch, bàn phím; khi capability database chưa có thì bị khóa. Thứ tự bền vững cần migration riêng `202611060002_guest_order.sql`; hướng dẫn review tại `GUEST-DIRECTORY-ORDER-REVIEW.md`. Migration chưa áp dụng production và lưu thứ tự live chưa được xác minh.
+
+
+## UI Overhaul release — current database status (2026-11-06)
+User confirms Guest Order and Agenda Icon Library migrations APPLIED & POSTFLIGHT VERIFIED, and successful persistence of new icons in production. This supersedes earlier migration-pending/blocker entries retained as historical evidence. These are USER-REPORTED production results, not an independent SQL execution by this agent. No migration is to be rerun. Release includes Agenda segmented time inputs and Lucide icons, plus dnd-kit guest directory and persistent ordering. Production UI smoke remains pending deployment.
