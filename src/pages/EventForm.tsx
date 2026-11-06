@@ -1,3 +1,4 @@
+import { youtubeVideoId } from "../lib/youtube";
 import { RichQuoteEditor } from "../components/RichQuoteEditor";
 import { LocationMethodIcon } from "../components/LocationMethodIcon";
 import { useEffect, useState } from "react";
@@ -77,6 +78,8 @@ function EventEditor({
     code: "",
     title: "",
     description: "",
+    description_rich: null,
+    youtube_url: "",
     quote_one: "",
     quote_two: null,
     starts_at: "",
@@ -174,6 +177,7 @@ function EventEditor({
             });
             return;
           }
+          if (values.youtube_url) values.youtube_url = `https://www.youtube.com/watch?v=${youtubeVideoId(values.youtube_url)}`;
           setSaving(true);
           let uploaded: string | null = null;
           try {
@@ -226,13 +230,9 @@ function EventEditor({
         <fieldset>
           <legend>Thông tin sự kiện</legend>
           {field("title", "Tên sự kiện *")}
-          <label>
-            Mô tả
-            <textarea rows={5} {...register("description")} />
-            {errors.description && (
-              <span className="field-error">{errors.description.message}</span>
-            )}
-          </label>
+          <RichQuoteEditor label="Mô tả" value={watch("description_rich") ?? (watch("description") ? {type:"doc",content:watch("description").split("\n").map(text => ({type:"paragraph",content:text ? [{type:"text",text}] : []}))} : null)} onChange={v => { change("description_rich", v); change("description", ""); }} />
+          {errors.description_rich && <span className="field-error">{String(errors.description_rich.message)}</span>}
+          <label>URL nhạc YouTube (tùy chọn)<input type="url" {...register("youtube_url")} aria-invalid={!!errors.youtube_url} />{errors.youtube_url && <span className="field-error">{errors.youtube_url.message}</span>}</label>
           <label>Quote 1 — Nội dung<textarea rows={4} maxLength={5000} {...register("quote_one")} /></label>
           {watch("quote_one")?.trim() && <blockquote className="quote-one-preview">{watch("quote_one")}<footer>CLB Sinh viên Yêu thích Sách</footer></blockquote>}
           <RichQuoteEditor value={watch("quote_two")} onChange={v => change("quote_two", v)} />

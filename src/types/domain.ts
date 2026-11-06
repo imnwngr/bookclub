@@ -11,6 +11,8 @@ export interface ClubEvent {
   code: string;
   title: string;
   description: string;
+  description_rich?: unknown;
+  youtube_url?: string | null;
   quote_one?: string;
   quote_two?: unknown;
   starts_at: string;

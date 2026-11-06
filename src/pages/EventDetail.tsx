@@ -1,3 +1,4 @@
+import { RichDocument } from "../components/InvitationQuoteTwo";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { getEvent } from "../features/events/api";
@@ -32,7 +33,7 @@ export default function EventDetail() {
         {statusLabels[eventStatus(event, now)]}
       </p>
       <h1>{event.title}</h1>
-      {event.description && <p className="prose">{event.description}</p>}
+      {event.description_rich ? <div className="prose"><RichDocument value={event.description_rich} /></div> : event.description && <p className="prose">{event.description}</p>}
       <EventInfo event={event} />
       <p className="footnote">
         Thời gian hiển thị theo múi giờ Việt Nam (UTC+7).

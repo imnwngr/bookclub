@@ -5,13 +5,13 @@ import type { JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
-import Color from "@tiptap/extension-color";
+import { QuoteColor } from "../lib/quoteColor";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { InvitationQuoteTwo } from "./InvitationQuoteTwo";
 const palette = ["#1c2845", "#377f7c", "#c78087", "#000000"];
-const extensions = [StarterKit.configure({ link: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false }), TextAlign.configure({ types: ["heading", "paragraph"] }), Highlight, TextStyle, Color];
-export function RichQuoteEditor({ value, onChange }: { value: unknown; onChange: (value: JSONContent | null) => void }) {
-  const editor = useEditor({ extensions, content: value && validQuoteDocument(value) ? value as JSONContent : "", editorProps: { attributes: { "aria-label": "Quote 2 — Nội dung", role: "textbox", "aria-multiline": "true" } }, onUpdate: ({ editor }) => onChange(editor.getText().trim() ? editor.getJSON() : null) });
+const extensions = [StarterKit.configure({ link: false, blockquote: false, code: false, codeBlock: false, horizontalRule: false }), TextAlign.configure({ types: ["heading", "paragraph"] }), Highlight, TextStyle, QuoteColor];
+export function RichQuoteEditor({ value, onChange, label = "Quote 2 — Nội dung" }: { value: unknown; onChange: (value: JSONContent | null) => void; label?: string }) {
+  const editor = useEditor({ extensions, content: value && validQuoteDocument(value) ? value as JSONContent : "", editorProps: { attributes: { "aria-label": label, role: "textbox", "aria-multiline": "true" } }, onUpdate: ({ editor }) => onChange(editor.getText().trim() ? editor.getJSON() : null) });
   useEffect(() => {
     if (!editor) return;
     const current = editor.getText().trim() ? editor.getJSON() : null;
@@ -19,7 +19,7 @@ export function RichQuoteEditor({ value, onChange }: { value: unknown; onChange:
   }, [editor, value]);
   if (!editor) return null;
   const btn = (label: string, active: boolean, action: () => void) => <button type="button" aria-pressed={active} onClick={action}>{label}</button>;
-  return <div className="rich-quote"><p>Quote 2 — Nội dung</p><div className="rich-toolbar" role="toolbar" aria-label="Định dạng Quote 2">
+  return <div className="rich-quote"><p>{label}</p><div className="rich-toolbar" role="toolbar" aria-label={"Định dạng " + label}>
     {btn("Đậm", editor.isActive("bold"), () => { editor.chain().focus().toggleBold().run(); })}
     {btn("Nghiêng", editor.isActive("italic"), () => { editor.chain().focus().toggleItalic().run(); })}
     {btn("Gạch chân", editor.isActive("underline"), () => { editor.chain().focus().toggleUnderline().run(); })}

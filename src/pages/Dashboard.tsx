@@ -9,7 +9,7 @@ import {
   formatDate,
   invitationUrl,
 } from "../lib/domain";
-import { db, errorMessage } from "../lib/supabase";
+import { errorMessage } from "../lib/supabase";
 import { Empty, ErrorState, Loading } from "../components/Feedback";
 import { EventFilters } from "../components/EventFilters";
 import { Confirm } from "../components/Confirm";
@@ -41,18 +41,6 @@ export default function Dashboard() {
           <Link className="button" to="/admin/new">
             Thêm sự kiện
           </Link>
-          <Link className="button secondary" to="/admin/guests">
-            Danh bạ khách mời
-          </Link>
-          <button
-            className="secondary"
-            onClick={async () => {
-              const { error } = await db().auth.signOut();
-              if (error) toast.error(errorMessage(error));
-            }}
-          >
-            Đăng xuất
-          </button>
         </div>
       </div>
       <div className="toolbar">

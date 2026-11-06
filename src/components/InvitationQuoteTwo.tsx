@@ -47,7 +47,12 @@ function containsText(value: unknown): boolean {
   if (!["doc", "paragraph", "heading", "bulletList", "orderedList", "listItem"].includes(String(node.type))) return false;
   return Array.isArray(node.content) && node.content.some(containsText);
 }
+export function RichDocument({ value }: { value: unknown }) {
+  if (!validQuoteDocument(value) || !containsText(value)) return null;
+  return <>{renderNode(value, 0)}</>;
+}
+
 export function InvitationQuoteTwo({ value }: { value: unknown }) {
   if (!validQuoteDocument(value) || !containsText(value)) return null;
-  return <section className="invitation-quote-two">{renderNode(value, 0)}</section>;
+  return <section className="invitation-quote-two"><RichDocument value={value} /></section>;
 }

@@ -60,7 +60,7 @@ async function backend(page: Page, admin = false) {
     const url = new URL(route.request().url());
     const path = url.pathname;
     let body: unknown = [];
-    if (path.endsWith("/is_admin")) body = admin;
+    if (path.endsWith("/is_admin") || path.endsWith("/can_edit_content")) body = admin;
     else if (path.endsWith("/agenda_icon_capabilities")) body = ["users", "music", "mic", "film", "award", "sparkles", "book-open", "gift", "trophy", "camera", "heart-handshake"];
     else if (path.endsWith("/get_event_v110"))
       body =
@@ -290,7 +290,7 @@ test("ordinary user denied admin, loading and API error states are explicit (moc
   page,
 }) => {
   await backend(page, true);
-  await page.route("**/rest/v1/rpc/is_admin", (r) =>
+  await page.route("**/rest/v1/rpc/can_edit_content", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: "false" }),
   );
   await page.goto("/bookclub/admin/");
@@ -339,7 +339,7 @@ test("guest directory edits and primary invitation only (mock API)", async ({
 });
 test("login and logout require authentication (mock API)", async ({ page }) => {
   await backend(page);
-  await page.route("**/rest/v1/rpc/is_admin", (r) =>
+  await page.route("**/rest/v1/rpc/can_edit_content", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: "true" }),
   );
   await page.route("**/auth/v1/token?**", (r) =>
@@ -1087,7 +1087,7 @@ test("compact invitation name dominates tagline while roles remain before and af
         .fontSize,
     ),
     tagline: parseFloat(
-      getComputedStyle(document.querySelector(".invitation-tagline")!).fontSize,
+      getComputedStyle(document.querySelector(".invitation-cover .section-label")!).fontSize,
     ),
   }));
   expect(sizes.name).toBeGreaterThan(sizes.tagline);
@@ -1159,7 +1159,7 @@ test("quote editor formats, saves and reloads independently (mock API)", async (
  await page.goto("/bookclub/admin/edit/102026");
  const editor=page.getByRole("textbox",{name:"Quote 2 — Nội dung"});
  await expect(editor).toBeVisible();
- await page.getByRole("button",{name:"Đậm",exact:true}).click();
+ await page.getByRole("toolbar",{name:"Định dạng Quote 2 — Nội dung"}).getByRole("button",{name:"Đậm",exact:true}).click();
  await editor.fill("Nội dung quote riêng");
  await page.getByLabel("Quote 1 — Nội dung").fill("Lời mời riêng");
  await page.getByRole("button",{name:"Lưu sự kiện"}).click();
@@ -1167,7 +1167,7 @@ test("quote editor formats, saves and reloads independently (mock API)", async (
  await page.reload();
  await expect(page.getByRole("textbox",{name:"Quote 2 — Nội dung"})).toContainText("Nội dung quote riêng");
  await expect(page.getByLabel("Quote 1 — Nội dung")).toHaveValue("Lời mời riêng");
- await expect(page.getByLabel("Mô tả",{exact:true})).toHaveValue(event.description);
+ await expect(page.getByRole("textbox",{name:"Mô tả",exact:true})).toHaveText(event.description);
  await page.getByRole("textbox",{name:"Quote 2 — Nội dung"}).fill("");
  await page.getByLabel("Quote 1 — Nội dung").fill("");
  await page.getByRole("button",{name:"Lưu sự kiện"}).click();
@@ -1177,6 +1177,94 @@ test("quote editor formats, saves and reloads independently (mock API)", async (
  await expect(page.getByLabel("Quote 1 — Nội dung")).toHaveValue("");
 });
 
+
+test("pasted Vietnamese quote formatting survives save and reload (mock API)", async ({ page }) => {
+ await backend(page, true);
+ await page.goto("/bookclub/admin/edit/102026");
+ const editor = page.getByRole("textbox", {name: "Quote 2 — Nội dung"});
+ await editor.click();
+ await editor.evaluate(element => {
+  const clipboard = new DataTransfer();
+  clipboard.setData("text/html", '<h2><span style="color: rgb(55, 127, 124)"><em>Đọc sách mở ra chân trời mới</em></span></h2><p>Hẹn gặp bạn tại câu lạc bộ.</p>');
+  clipboard.setData("text/plain", "Đọc sách mở ra chân trời mới\nHẹn gặp bạn tại câu lạc bộ.");
+  element.dispatchEvent(new ClipboardEvent("paste", {clipboardData: clipboard, bubbles: true, cancelable: true}));
+ });
+ await expect(editor.locator("h2 em")).toHaveText("Đọc sách mở ra chân trời mới");
+ await page.getByRole("button", {name: "Lưu sự kiện"}).click();
+ await expect(page.getByText("Đã lưu sự kiện")).toBeVisible();
+ await page.reload();
+ await expect(editor.locator("h2 em")).toHaveText("Đọc sách mở ra chân trời mới");
+ await expect(editor.locator("h2 span")).toHaveCSS("color", "rgb(55, 127, 124)");
+});
+
+test("formatted description and YouTube URL survive save and reload (mock API)", async ({ page }) => {
+ await backend(page, true);
+ await page.goto("/bookclub/admin/edit/102026");
+ const editor = page.getByRole("textbox", {name: "Mô tả", exact: true});
+ await editor.click();
+ await editor.press("ControlOrMeta+A");
+ await editor.evaluate(element => {
+  const clipboard = new DataTransfer();
+  clipboard.setData("text/html", '<h2><span style="color: rgb(55, 127, 124)"><em>Chào mừng đến với câu lạc bộ</em></span></h2>');
+  clipboard.setData("text/plain", "Chào mừng đến với câu lạc bộ");
+  element.dispatchEvent(new ClipboardEvent("paste", {clipboardData: clipboard, bubbles: true, cancelable: true}));
+ });
+ await page.getByLabel("URL nhạc YouTube (tùy chọn)").fill("https://youtu.be/dQw4w9WgXcQ");
+ const request = page.waitForRequest(r => r.url().endsWith("/save_event"));
+ await page.getByRole("button", {name: "Lưu sự kiện"}).click();
+ const payload = (await request).postDataJSON().p_event;
+ expect(payload.youtube_url).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+ expect(JSON.stringify(payload.description_rich)).toContain("#377f7c");
+ await expect(page.getByText("Đã lưu sự kiện")).toBeVisible();
+ await page.reload();
+ await expect(page.getByRole("textbox", {name: "Mô tả", exact: true})).toContainText("Chào mừng đến với câu lạc bộ");
+ await expect(page.getByRole("textbox", {name: "Mô tả", exact: true}).locator("h2 em")).toHaveText("Chào mừng đến với câu lạc bộ");
+ await expect(page.getByRole("textbox", {name: "Mô tả", exact: true}).locator("h2 span")).toHaveCSS("color", "rgb(55, 127, 124)");
+ await expect(page.getByLabel("URL nhạc YouTube (tùy chọn)")).toHaveValue("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+ await page.getByLabel("URL nhạc YouTube (tùy chọn)").fill("https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ");
+ await page.getByRole("button", {name: "Lưu sự kiện"}).click();
+ await expect(page.getByText("Nhập URL video YouTube hợp lệ.")).toBeVisible();
+ await page.getByLabel("URL nhạc YouTube (tùy chọn)").fill("");
+ await page.getByRole("button", {name: "Lưu sự kiện"}).click();
+ await expect(page.getByText("Đã lưu sự kiện")).toBeVisible();
+ await page.reload();
+ await expect(page.getByLabel("URL nhạc YouTube (tùy chọn)")).toHaveValue("");
+});
+
+test("invitation player handles blocked autoplay and controls (mock YouTube API)", async ({page}) => {
+ await backend(page);
+ await page.route('**/rest/v1/rpc/resolve_invitation', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,youtube_url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ'},invitation})}));
+ await page.route('https://www.youtube.com/iframe_api', route => route.fulfill({contentType:'application/javascript',body:`
+ window.playerCalls=[]; window.playerEvents=null;
+ window.YT={Player:class {constructor(el,opts){this.events=opts.events;window.playerEvents=opts.events;let iframe=document.createElement('iframe');iframe.title='YouTube video player';el.replaceWith(iframe);setTimeout(()=>opts.events.onReady({target:this}),0)}
+ playVideo(){window.playerCalls.push('play');this.events.onAutoplayBlocked({target:this})}
+ pauseVideo(){window.playerCalls.push('pause');this.events.onStateChange({target:this,data:2})}
+ mute(){window.playerCalls.push('mute')} unMute(){window.playerCalls.push('unmute')}
+ setVolume(n){window.playerCalls.push('volume:'+n)} destroy(){} }};
+ window.onYouTubeIframeAPIReady();`}));
+ await page.goto('/bookclub/102026/nguyen-hoang-vien');
+ await expect(page.locator('.invitation-cover')).not.toContainText(/Một lời mời|một cuộc gặp gỡ/i);
+ await page.getByRole('button',{name:'Mở thiệp mời'}).click();
+ const music=page.getByRole('region',{name:'Nhạc sự kiện'});
+ await music.scrollIntoViewIfNeeded();
+ await expect(music.getByRole('button',{name:'Bật nhạc'})).toBeVisible();
+ await expect(music.getByRole('button',{name:'Tạm dừng'})).toBeDisabled();
+ const size=await music.locator('iframe').boundingBox();
+ expect(size && size.width>=200 && size.height>=200).toBeTruthy();
+ expect(await page.evaluate(() => (window as unknown as {playerCalls:string[]}).playerCalls)).toContain('volume:35');
+ await music.getByRole('button',{name:'Bật nhạc'}).click();
+ await expect(music.getByRole('button',{name:'Bật nhạc'})).toBeVisible();
+ await expect(music.getByRole('button',{name:'Tạm dừng'})).toBeDisabled();
+ await page.evaluate(() => {const w=window as unknown as {playerEvents:{onStateChange:(x:{data:number})=>void}};w.playerEvents.onStateChange({data:1});});
+ await expect(music.getByRole('button',{name:'Tạm dừng'})).toBeEnabled();
+ await music.getByRole('button',{name:'Tạm dừng'}).click();
+ await music.getByRole('button',{name:'Tắt tiếng'}).click();
+ await music.getByRole('button',{name:'Bật tiếng'}).click();
+ await music.getByRole('slider',{name:'Âm lượng'}).fill('60');
+ const calls=await page.evaluate(() => (window as unknown as {playerCalls:string[]}).playerCalls);
+ expect(calls).toEqual(expect.arrayContaining(['pause','mute','unmute','volume:60']));
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});
 
 test("tablet layout and reduced motion preserve readable quotes (mock API)",async ({page}, info)=>{
  await page.setViewportSize({width:768,height:900});
@@ -1200,4 +1288,38 @@ test('quote visibility matrix, legacy data and safe rich text (mock API)', async
  const doc=(text:string)=>({type:'doc',content:[{type:'paragraph',content:[{type:'text',text,marks:[{type:'bold'}]}]}]});
  const cases=[{data:{},one:0,two:0},{data:{quote_one:'  ',quote_two:doc('  ')},one:0,two:0},{data:{quote_one:'Đầu'},one:1,two:0},{data:{quote_two:doc('Cuối')},one:0,two:1},{data:{quote_one:'Đầu',quote_two:doc('<img src=x onerror=alert(1)>')},one:1,two:1}];
  for(const c of cases){values=c.data;await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();await expect(page.locator('.invitation-quote-one')).toHaveCount(c.one);await expect(page.locator('.invitation-quote-two')).toHaveCount(c.two);await expect(page.locator('.invitation-quote-two img')).toHaveCount(0);}
+});
+
+
+for(const role of ['admin','editor'])test('role directory '+role+' controls and navigation (mock API)',async({page},info)=>{
+ await backend(page,true);if(info.project.name==='mobile')await page.setViewportSize({width:320,height:700});
+ await page.route('**/rest/v1/rpc/effective_role',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(role)}));
+ await page.route('**/rest/v1/rpc/role_directory',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify([{user_id:'admin-fixture',email:'admin@example.invalid',role:'admin',status:'confirmed'},{user_id:'editor-fixture',email:'editor@example.invalid',role:'editor',status:'invited'}])}));
+ await page.goto('/bookclub/admin/roles');await expect(page.getByRole('heading',{name:'Quản lý vai trò'})).toBeVisible();
+ await expect(page.getByText('admin@example.invalid',{exact:true})).toBeVisible();
+ const nav=page.getByRole('navigation',{name:'Quản trị'});await expect(nav.getByRole('link')).toHaveText(['Sự kiện','Danh bạ khách mời','Quản lý vai trò']);
+ if(role==='admin'){await expect(page.getByRole('button',{name:'Thu hồi Editor'})).toHaveCount(1);await page.getByRole('button',{name:'Thêm tài khoản'}).click();await expect(page.getByRole('dialog')).toBeVisible();await expect(page.getByRole('dialog').getByLabel('Vai trò').locator('option')).toHaveText(['Editor']);await page.getByRole('button',{name:'Hủy',exact:true}).click();}
+ else {await expect(page.getByRole('button',{name:'Thêm tài khoản'})).toHaveCount(0);await expect(page.getByRole('button',{name:'Thu hồi Editor'})).toHaveCount(0);}
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});
+
+
+test('role revoke confirms, shows server error and refreshes on success (mock API)',async({page})=>{
+ await backend(page,true);let revoked=false,denied=true;
+ await page.route('**/rest/v1/rpc/effective_role',r=>r.fulfill({status:200,contentType:'application/json',body:'"admin"'}));
+ await page.route('**/rest/v1/rpc/role_directory',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(revoked?[]:[{user_id:'20000000-0000-4000-8000-000000000002',email:'editor@example.invalid',role:'editor',status:'confirmed'}])}));
+ await page.route('**/functions/v1/manage-editors',r=>{const body=r.request().postDataJSON();expect(body).toEqual({action:'revoke',user_id:'20000000-0000-4000-8000-000000000002',role:'editor'});if(!denied)revoked=true;return r.fulfill({status:denied?403:200,contentType:'application/json',body:JSON.stringify(denied?{error:'Role operation refused'}:{ok:true})})});
+ await page.goto('/bookclub/admin/roles');await page.getByRole('button',{name:'Thu hồi Editor'}).click();await expect(page.getByRole('dialog')).toContainText('editor@example.invalid');
+ await page.getByRole('button',{name:'Xác nhận',exact:true}).click();await expect(page.getByText('Role operation refused')).toBeVisible();await expect(page.getByRole('dialog')).toBeVisible();
+ denied=false;await page.getByRole('button',{name:'Xác nhận',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByText('Không có tài khoản phù hợp.')).toBeVisible();
+});
+
+
+test('role directory loading, empty and denied states (mock API)',async({page})=>{
+ await backend(page,true);await page.route('**/rest/v1/rpc/effective_role',r=>r.fulfill({status:200,contentType:'application/json',body:'"editor"'}));
+ let release!:()=>void;const wait=new Promise<void>(resolve=>{release=resolve});
+ await page.route('**/rest/v1/rpc/role_directory',async r=>{await wait;await r.fulfill({status:200,contentType:'application/json',body:'[]'})});
+ await page.goto('/bookclub/admin/roles');await expect(page.getByText('Đang tải dữ liệu…')).toBeVisible();release();await expect(page.getByText('Không có tài khoản phù hợp.')).toBeVisible();
+ await page.route('**/rest/v1/rpc/role_directory',r=>r.fulfill({status:403,contentType:'application/json',body:JSON.stringify({code:'42501',message:'Content access required'})}));
+ await page.reload();await expect(page.getByRole('heading',{name:'Không thể tải dữ liệu'})).toBeVisible();
 });

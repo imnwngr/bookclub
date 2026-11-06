@@ -1,3 +1,5 @@
+import { YouTubePlayer } from "../components/YouTubePlayer";
+import { RichDocument } from "../components/InvitationQuoteTwo";
 import { InvitationQuoteTwo } from "../components/InvitationQuoteTwo";
 import { Heart } from "lucide-react";
 import { GuestDescription } from "../components/GuestDescription";
@@ -35,11 +37,6 @@ export default function InvitationPage() {
         <div className="invitation-cover">
           <InvitationLogos />
           <p className="section-label">BookClub CTUT · Trân trọng kính mời</p>
-          <p className="invitation-tagline">
-            Một lời mời,
-            <br />
-            một cuộc gặp gỡ.
-          </p>
           <p className="cover-recipient">
             <span>{invitation.salutation}</span>{" "}
             <strong>{invitation.name}</strong>
@@ -66,11 +63,12 @@ export default function InvitationPage() {
                 : "Câu lạc bộ Sinh viên Yêu thích Sách trân trọng kính mời quý vị đến tham dự"}
             </p>
             <h2>{event.title}</h2>
-            {event.description && <p className="prose">{event.description}</p>}
+            {event.description_rich ? <div className="prose"><RichDocument value={event.description_rich} /></div> : event.description && <p className="prose">{event.description}</p>}
             <a className="section-next" href="#invitation-schedule">
               Xem thời gian và địa điểm ↓
             </a>
           </section>
+          {event.youtube_url && <YouTubePlayer url={event.youtube_url} />}
           <MeetingSchedule event={event} />
           {!!event.quote_one?.trim() && <section className="invitation-quote-one"><Heart aria-hidden="true" size={24} /><blockquote>{event.quote_one}</blockquote><p>CLB Sinh viên Yêu thích Sách</p></section>}
           {!!event.agenda?.length && (

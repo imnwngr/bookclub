@@ -1,0 +1,6 @@
+import {useState} from "react";
+import {Link,useNavigate} from "react-router-dom";
+import {useAuth} from "../features/admin/Auth";
+import {db,errorMessage} from "../lib/supabase";
+import {Loading} from "../components/Feedback";
+export default function AcceptInvitation(){const {session,pending}=useAuth(),navigate=useNavigate();const [password,setPassword]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');if(pending)return <Loading/>;if(!session)return <section className="state"><h1>Lời mời chưa hợp lệ hoặc đã hết hạn</h1><p>Liên hệ Admin để kiểm tra tài khoản và hướng dẫn đăng nhập.</p><Link to="/admin/login">Đăng nhập</Link></section>;return <form className="panel" onSubmit={async e=>{e.preventDefault();if(busy)return;setBusy(true);setError('');const result=await db().auth.updateUser({password});setBusy(false);if(result.error)setError(errorMessage(result.error));else{setPassword('');navigate('/admin/',{replace:true})}}}><h1>Hoàn tất tài khoản</h1><label>Mật khẩu mới<input type="password" autoComplete="new-password" minLength={10} required value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<p role="alert">{error}</p>}<button disabled={busy}>{busy?'Đang lưu…':'Lưu mật khẩu và tiếp tục'}</button></form>}

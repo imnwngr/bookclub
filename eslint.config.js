@@ -5,6 +5,7 @@ export default tseslint.config(
   {
     ignores: [
       "dist/**",
+      ".local/**",
       "dist-e2e/**",
       "node_modules/**",
       "playwright-report/**",

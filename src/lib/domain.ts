@@ -1,3 +1,4 @@
+import { youtubeVideoId } from "./youtube";
 import { validQuoteDocument } from "./quoteDocument";
 import { isAgendaIcon } from "./agendaIcons";
 import { z } from "zod";
@@ -43,6 +44,8 @@ export const eventSchema = z
     code: z.union([codeSchema, z.literal("")]),
     title: z.string().trim().min(1, "Vui lòng nhập tên sự kiện.").max(240),
     description: z.string().max(10000),
+    description_rich: z.unknown().optional().refine(v => validQuoteDocument(v), "Mô tả quá dài hoặc không hợp lệ."),
+    youtube_url: z.string().nullable().optional().refine(v => !v || !!youtubeVideoId(v), "Nhập URL video YouTube hợp lệ."),
     quote_one: z.string().max(5000).optional(),
     quote_two: z.unknown().optional().refine(v => validQuoteDocument(v), "Quote 2 quá dài hoặc không hợp lệ."),
     starts_at: z.string().min(1, "Chọn giờ bắt đầu."),

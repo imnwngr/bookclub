@@ -7,6 +7,8 @@ import Login from "./pages/Login";
 import { Loading } from "./components/Feedback";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const EventForm = lazy(() => import("./pages/EventForm"));
+const AcceptInvitation = lazy(() => import("./pages/AcceptInvitation"));
+const RoleDirectory = lazy(() => import("./pages/RoleDirectory"));
 const GuestDirectory = lazy(() => import("./pages/GuestDirectory"));
 import { AdminGuard } from "./features/admin/Auth";
 function Layout() {
@@ -53,6 +55,7 @@ export const router = createBrowserRouter(
       children: [
         { index: true, element: <Home /> },
         { path: "admin/login", element: <Login /> },
+        { path: "auth/accept", element: <Suspense fallback={<Loading />}><AcceptInvitation /></Suspense> },
         {
           element: <AdminGuard />,
           children: [
@@ -80,6 +83,7 @@ export const router = createBrowserRouter(
                 </Suspense>
               ),
             },
+            { path: "admin/roles", element: <Suspense fallback={<Loading />}><RoleDirectory /></Suspense> },
             {
               path: "admin/guests",
               element: (
