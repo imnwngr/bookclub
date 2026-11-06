@@ -723,7 +723,13 @@ test("refinement cover descriptions, scroll sections, keyboard and long mobile c
   await expect(
     page.locator(".invitation-greeting .guest-description > span"),
   ).toHaveCount(3);
-  await expect(page.locator(".invitation-section")).toHaveCount(4);
+  // This legacy event has no quotes; venue details belong only to the schedule card.
+  await expect(page.locator(".invitation-content > .invitation-section")).toHaveCount(3);
+  expect(await page.locator(".invitation-content > .invitation-section").evaluateAll(sections => sections.map(section => section.id))).toEqual(["invitation-greeting", "invitation-schedule", "invitation-program"]);
+  await expect(page.locator("#invitation-venue,.meeting-venue")).toHaveCount(0);
+  await expect(page.locator("#invitation-schedule .venue-card")).toHaveCount(1);
+  await expect(page.locator("#invitation-schedule .venue-detail")).toContainText("Đi theo bảng hướng dẫn tại sảnh.");
+  await expect(page.locator(".invitation-quote-one,.invitation-quote-two")).toHaveCount(0);
   await page.locator("#invitation-program").scrollIntoViewIfNeeded();
   await expect(page.locator(".agenda li").first()).toContainText(
     "08:00 — 08:30",
