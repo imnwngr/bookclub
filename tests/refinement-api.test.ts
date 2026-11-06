@@ -46,3 +46,10 @@ it("sends new icons only after capability confirms them and keeps legacy values 
   await saveEvent({ agenda: [{ ...agenda[0], icon: "welcome" }] } as Parameters<typeof saveEvent>[0], []);
   expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["save_event"]);
 });
+
+it("blocks quote changes when migration is missing, including clearing a saved quote", async () => {
+  mocks.rpc.mockReset(); mocks.limit.mockResolvedValue({error:{code:"42703"}});
+  await expect(saveEvent({quote_one:"Lời mời"} as Parameters<typeof saveEvent>[0],[])).rejects.toThrow("Database chưa hỗ trợ quote");
+  await expect(saveEvent({quote_one:""} as Parameters<typeof saveEvent>[0],[],{quote_one:"Cũ"} as Parameters<typeof saveEvent>[2])).rejects.toThrow("Database chưa hỗ trợ quote");
+  expect(mocks.rpc).not.toHaveBeenCalled();
+});

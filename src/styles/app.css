@@ -1283,3 +1283,40 @@ html:has(.dirty-save-bar) {
     padding: 12px;
   }
 }
+
+.meeting-rule{width:5rem;height:4px;margin:1rem auto 2rem;border-radius:4px;background:linear-gradient(90deg,#1a237e,#c2185b)}
+.meeting-redesign{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;text-align:left;align-items:start;width:100%}.calendar-card,.venue-card{background:white;border:1px solid #e4e6ef;border-radius:1rem;box-shadow:0 8px 30px #1a237e12;overflow:hidden;min-width:0}.calendar-card header{background:linear-gradient(120deg,#1a237e,#3949ab,#c2185b);color:white;padding:1.5rem}.calendar-card header span{display:inline-flex;align-items:center;gap:.3rem;margin-right:1rem}.calendar-card header h3{color:white;margin:.7rem 0 .2rem}.calendar-months{padding:1rem}.calendar-months h4{text-align:center}.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;gap:.2rem}.calendar-grid span,.calendar-grid b{padding:.5rem 0;border-radius:50%}.calendar-start{color:white;background:linear-gradient(135deg,#3949ab,#c2185b)}.calendar-end{color:white;background:#3949ab}.calendar-between{background:#eeeaf8}.calendar-card footer{padding:1rem;border-top:1px solid #eee}.venue-tabs{display:flex}.venue-tabs button{flex:1;border:0;border-radius:0;background:#f2f3f8;color:#39405e;display:flex;align-items:center;justify-content:center;gap:.4rem}.venue-tabs button[aria-pressed=true]{background:white;color:#3949ab;box-shadow:inset 0 -3px #c2185b}.venue-media{position:relative;aspect-ratio:2.2;overflow:hidden;background:#f3f3f7}.venue-media img{width:100%;height:100%;object-fit:cover}.venue-media a{display:block;height:100%}.venue-media strong{position:absolute;bottom:0;left:0;right:0;padding:1rem;color:white;background:linear-gradient(transparent,#000a);pointer-events:none}.venue-map{min-height:10rem;display:grid;place-content:center;text-align:center;justify-items:center;background:#f3f3f7}.venue-detail{padding:1.25rem;overflow-wrap:anywhere}.venue-detail h3{display:flex;align-items:center;gap:.5rem}.venue-actions{display:flex;gap:.5rem;flex-wrap:wrap}.venue-actions button,.venue-actions a{display:inline-flex;align-items:center;justify-content:center;gap:.4rem}.venue-actions a{padding:.6rem 1rem;border-radius:.5rem;background:#3949ab;color:white}@media(max-width:700px){.meeting-redesign{grid-template-columns:1fr}.venue-tabs button{font-size:.8rem;padding:.6rem .3rem}.venue-actions>*{flex:1}}
+
+@media(max-width:420px){.venue-actions{flex-direction:column}.venue-actions button,.venue-actions a{width:100%;min-height:44px;word-break:normal;overflow-wrap:normal}.venue-tabs button{overflow-wrap:normal;word-break:normal}.calendar-months{min-height:0}}
+
+/* Invitation palette, scoped to the public invitation. */
+.invitation{--inv-cloud:#f5f3ee;--inv-navy:#1c2845;--inv-teal:#377f7c;--inv-rose:#c78087;--inv-champagne:#e8cdb0;color:var(--inv-navy);background:var(--inv-cloud)}
+.invitation .meeting-redesign{align-items:stretch;gap:clamp(1rem,3vw,2rem)}
+.invitation .calendar-card,.invitation .venue-card{border-color:#e5e1da;box-shadow:0 8px 24px #1c284510}
+.invitation .calendar-card header{background:linear-gradient(115deg,var(--inv-navy),var(--inv-teal))}
+.invitation .meeting-rule{background:linear-gradient(90deg,var(--inv-teal),var(--inv-rose))}
+.invitation .calendar-start{background:linear-gradient(135deg,var(--inv-teal),var(--inv-rose))}.invitation .calendar-end{background:var(--inv-navy)}.invitation .calendar-between{background:#e3eeeb}
+.invitation .venue-tabs button[aria-pressed=true]{color:var(--inv-navy);box-shadow:inset 0 -3px var(--inv-rose)}.invitation .venue-actions a{background:var(--inv-teal)}
+.invitation .calendar-months{min-height:0}.invitation .calendar-card{display:flex;flex-direction:column}.invitation .calendar-card footer{margin-top:auto}
+@media(prefers-reduced-motion:no-preference){.invitation .venue-actions button,.invitation .venue-actions a{transition:transform .18s,box-shadow .18s}.invitation .venue-actions button:hover,.invitation .venue-actions a:hover{transform:translateY(-2px)}}
+
+.invitation-quote-one,.quote-one-preview{padding:clamp(2rem,6vw,5rem) 1.5rem;text-align:center;background:linear-gradient(120deg,#f5f3ee,#e8cdb0);color:#1c2845;white-space:pre-line;overflow-wrap:anywhere}.invitation-quote-one blockquote,.quote-one-preview{font-size:clamp(1.2rem,3vw,2rem);line-height:1.6}.invitation-quote-one p,.quote-one-preview footer{font-size:1rem;font-weight:600;margin-top:1rem}
+
+.invitation-quote-two{padding:clamp(2rem,6vw,5rem) 1.5rem;text-align:center;background:var(--inv-cloud);color:var(--inv-navy);overflow-wrap:anywhere}.invitation-quote-two p{white-space:pre-wrap}
+
+.invitation .meeting-schedule,.invitation .invitation-program{min-height:0;padding-block:clamp(3rem,6vw,5rem)}
+.invitation .meeting-schedule{background:var(--inv-cloud)}
+
+.invitation-quote-one svg{color:var(--inv-rose)}
+@media(prefers-reduced-motion:no-preference){.invitation .venue-tabs button{transition:color .2s,box-shadow .2s,background-color .2s}.invitation .venue-media,.invitation .venue-map{animation:venue-reveal .22s ease-out}@keyframes venue-reveal{from{opacity:.7}to{opacity:1}}}
+
+@supports (animation-timeline:view()) {
+ @media (prefers-reduced-motion:no-preference) {
+  .invitation .meeting-redesign,.invitation .invitation-quote-one,.invitation .invitation-program,.invitation .invitation-quote-two { animation: invitation-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 22%; }
+  @keyframes invitation-reveal { from { opacity:.55; transform:translateY(12px); } to { opacity:1; transform:none; } }
+ }
+}
+
+.rich-toolbar{display:flex;gap:.3rem;flex-wrap:wrap}.rich-toolbar button{padding:.4rem .55rem;font-size:.85rem}.rich-toolbar button[aria-pressed=true]{outline:2px solid #377f7c}.rich-quote .tiptap{min-height:120px;padding:1rem;border:1px solid #a9b9aa;border-radius:.5rem;background:white}.rich-quote .tiptap:focus{outline:2px solid #377f7c}
+
+.invitation-quote-one > svg{display:block;margin:0 auto 1rem}.invitation .meeting-redesign{align-items:start}

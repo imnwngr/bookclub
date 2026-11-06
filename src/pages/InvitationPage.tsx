@@ -1,3 +1,5 @@
+import { InvitationQuoteTwo } from "../components/InvitationQuoteTwo";
+import { Heart } from "lucide-react";
 import { GuestDescription } from "../components/GuestDescription";
 import { MeetingSchedule } from "../components/MeetingSchedule";
 import { useState } from "react";
@@ -5,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { resolveInvitation } from "../features/events/api";
 import { Empty, ErrorState, Loading } from "../components/Feedback";
-import { EventInfo } from "../components/EventInfo";
 import { Agenda } from "../components/Agenda";
 import { InvitationLogos } from "../components/InvitationLogos";
 export default function InvitationPage() {
@@ -71,15 +72,7 @@ export default function InvitationPage() {
             </a>
           </section>
           <MeetingSchedule event={event} />
-          {(event.venue_image_path || event.directions) && (
-            <section
-              className="invitation-section meeting-venue"
-              id="invitation-venue"
-              tabIndex={-1}
-            >
-              <EventInfo event={event} />
-            </section>
-          )}
+          {!!event.quote_one?.trim() && <section className="invitation-quote-one"><Heart aria-hidden="true" size={24} /><blockquote>{event.quote_one}</blockquote><p>CLB Sinh viên Yêu thích Sách</p></section>}
           {!!event.agenda?.length && (
             <section
               className="invitation-section invitation-program"
@@ -89,6 +82,7 @@ export default function InvitationPage() {
               <Agenda items={event.agenda} />
             </section>
           )}
+          <InvitationQuoteTwo value={event.quote_two} />
           <p className="invitation-signoff">
             Sự hiện diện của{" "}
             {invitation.kind === "group" ? "các bạn" : "quý vị"} là niềm vinh

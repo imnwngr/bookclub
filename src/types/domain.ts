@@ -11,6 +11,8 @@ export interface ClubEvent {
   code: string;
   title: string;
   description: string;
+  quote_one?: string;
+  quote_two?: unknown;
   starts_at: string;
   ends_at: string;
   status: Publication;

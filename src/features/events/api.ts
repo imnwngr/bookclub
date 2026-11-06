@@ -71,6 +71,10 @@ export async function saveEvent(
   guestIds: string[],
   existing?: ClubEvent,
 ) {
+  if (event.quote_one?.trim() || existing?.quote_one?.trim() || event.quote_two || existing?.quote_two) {
+    const capability = await db().from("events").select("quote_one,quote_two").limit(0);
+    if (capability.error) throw Error("Database chưa hỗ trợ quote. Chưa lưu sự kiện; cần áp dụng migration đã được duyệt.");
+  }
   const newIcons = (event.agenda ?? []).map((item) => item.icon).filter((icon): icon is string => !!icon && iconValuesRequiringMigration.has(icon));
   if (newIcons.length) {
     const capability = await db().rpc("agenda_icon_capabilities");

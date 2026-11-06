@@ -1,3 +1,4 @@
+import { RichQuoteEditor } from "../components/RichQuoteEditor";
 import { LocationMethodIcon } from "../components/LocationMethodIcon";
 import { useEffect, useState } from "react";
 import { useForm, type FieldPath, type FieldPathValue } from "react-hook-form";
@@ -76,6 +77,8 @@ function EventEditor({
     code: "",
     title: "",
     description: "",
+    quote_one: "",
+    quote_two: null,
     starts_at: "",
     ends_at: "",
     status: "draft",
@@ -230,6 +233,10 @@ function EventEditor({
               <span className="field-error">{errors.description.message}</span>
             )}
           </label>
+          <label>Quote 1 — Nội dung<textarea rows={4} maxLength={5000} {...register("quote_one")} /></label>
+          {watch("quote_one")?.trim() && <blockquote className="quote-one-preview">{watch("quote_one")}<footer>CLB Sinh viên Yêu thích Sách</footer></blockquote>}
+          <RichQuoteEditor value={watch("quote_two")} onChange={v => change("quote_two", v)} />
+          {errors.quote_two && <span className="field-error">{String(errors.quote_two.message)}</span>}
           {field("code", "Mã sự kiện")}
           {!event && (
             <small>

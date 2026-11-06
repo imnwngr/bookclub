@@ -1095,3 +1095,103 @@ test("compact invitation name dominates tagline while roles remain before and af
     ),
   ).toBe(true);
 });
+
+
+test("invitation schedule cards adapt and venue tabs work (mock API)", async ({ page }, info) => {
+  await backend(page);
+  if (info.project.name === "mobile") await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto("/bookclub/102026/nguyen-hoang-vien");
+  await page.getByRole("button", { name: "Mở thiệp mời" }).click();
+  const schedule = page.locator("#invitation-schedule");
+  await expect(schedule.getByRole("heading", { name: "Thông Tin Buổi Họp Mặt" })).toBeVisible();
+  const calendar = await schedule.locator(".calendar-card").boundingBox();
+  const venue = await schedule.locator(".venue-card").boundingBox();
+  expect(calendar).not.toBeNull(); expect(venue).not.toBeNull();
+  if (info.project.name === "mobile") expect(venue!.y).toBeGreaterThan(calendar!.y);
+  else expect(venue!.x).toBeGreaterThan(calendar!.x);
+  await schedule.getByRole("button", { name: "Hình ảnh địa điểm" }).click();
+  await expect(schedule.getByText("Chưa có ảnh địa điểm.")).toBeVisible();
+  await schedule.getByRole("button", { name: "Bản đồ Google Maps" }).click();
+  await expect(schedule.getByRole("link", { name: "Chỉ đường" })).toHaveAttribute("rel", "noopener noreferrer");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await schedule.screenshot({ path: `test-results/schedule-${info.project.name}.png` });
+});
+
+
+test("optional quote one appears only when nonblank (mock API)", async ({page}) => {
+ await backend(page);
+ let quote = "   ";
+ await page.route("**/rest/v1/rpc/resolve_invitation", route => route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({event:{...event,quote_one:quote},invitation})}));
+ await page.goto("/bookclub/102026/nguyen-hoang-vien");
+ await page.getByRole("button",{name:"Mở thiệp mời"}).click();
+ await expect(page.locator(".invitation-quote-one")).toHaveCount(0);
+ quote = "Một câu riêng"; await page.reload(); await page.getByRole("button",{name:"Mở thiệp mời"}).click();
+ await expect(page.locator(".invitation-quote-one")).toContainText("Một câu riêng");
+ await expect(page.locator(".invitation-quote-one")).toContainText("CLB Sinh viên Yêu thích Sách");
+});
+
+
+test("quote sections follow schedule and program without duplicate venue (mock API)", async ({page}, info) => {
+ if (info.project.name === "desktop") await page.setViewportSize({width:1440,height:900});
+ else await page.setViewportSize({width:320,height:700});
+ await backend(page);
+ const quoteTwo={type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"Lời nhắn cuối"}]}]};
+ await page.route("**/rest/v1/rpc/resolve_invitation",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({event:{...event,quote_one:"Lời nhắn đầu",quote_two:quoteTwo,venue_image_path:null,agenda:[{time:"08:00",description:"Đón khách",highlight:false}]},invitation})}));
+ await page.goto("/bookclub/102026/nguyen-hoang-vien");await page.getByRole("button",{name:"Mở thiệp mời"}).click();
+ const order=await page.locator(".invitation-content").evaluate(el=>Array.from(el.children).map(c=>c.className));
+ expect(order.indexOf("invitation-quote-one")).toBeGreaterThan(order.indexOf("invitation-section meeting-schedule"));
+ expect(order.indexOf("invitation-quote-two")).toBeGreaterThan(order.indexOf("invitation-section invitation-program"));
+ await expect(page.locator(".meeting-venue")).toHaveCount(0);
+ await expect(page.locator(".invitation-quote-two")).toContainText("Lời nhắn cuối");
+ expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+ await page.screenshot({path:`test-results/grand-${info.project.name}.png`,fullPage:true});
+});
+
+
+test("quote editor formats, saves and reloads independently (mock API)", async ({page}) => {
+ await backend(page,true);
+ await page.goto("/bookclub/admin/edit/102026");
+ const editor=page.getByRole("textbox",{name:"Quote 2 — Nội dung"});
+ await expect(editor).toBeVisible();
+ await page.getByRole("button",{name:"Đậm",exact:true}).click();
+ await editor.fill("Nội dung quote riêng");
+ await page.getByLabel("Quote 1 — Nội dung").fill("Lời mời riêng");
+ await page.getByRole("button",{name:"Lưu sự kiện"}).click();
+ await expect(page.getByText("Đã lưu sự kiện")).toBeVisible();
+ await page.reload();
+ await expect(page.getByRole("textbox",{name:"Quote 2 — Nội dung"})).toContainText("Nội dung quote riêng");
+ await expect(page.getByLabel("Quote 1 — Nội dung")).toHaveValue("Lời mời riêng");
+ await expect(page.getByLabel("Mô tả",{exact:true})).toHaveValue(event.description);
+ await page.getByRole("textbox",{name:"Quote 2 — Nội dung"}).fill("");
+ await page.getByLabel("Quote 1 — Nội dung").fill("");
+ await page.getByRole("button",{name:"Lưu sự kiện"}).click();
+ await expect(page.getByText("Đã lưu sự kiện")).toBeVisible();
+ await page.reload();
+ await expect(page.getByRole("textbox",{name:"Quote 2 — Nội dung"})).toHaveText("");
+ await expect(page.getByLabel("Quote 1 — Nội dung")).toHaveValue("");
+});
+
+
+test("tablet layout and reduced motion preserve readable quotes (mock API)",async ({page}, info)=>{
+ await page.setViewportSize({width:768,height:900});
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await backend(page);
+ await page.route('**/rest/v1/rpc/resolve_invitation',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,quote_one:'Quote kiểm thử',quote_two:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'Nội dung cuối',marks:[{type:'bold'}]}]}]}},invitation})}));
+ await page.goto('/bookclub/102026/nguyen-hoang-vien');
+ await page.getByRole('button',{name:'Mở thiệp mời'}).focus(); await page.keyboard.press('Enter');
+ await expect(page.locator('.invitation-quote-one')).toBeVisible();
+ await expect(page.locator('.invitation-quote-two strong')).toHaveText('Nội dung cuối');
+ expect(await page.locator('.invitation-quote-one').evaluate(el=>getComputedStyle(el).animationName)).toBe('none');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await page.screenshot({path:`test-results/tablet-quote-${info.project.name}.png`,fullPage:true,animations:'disabled'});
+});
+
+
+test('quote visibility matrix, legacy data and safe rich text (mock API)', async ({page}) => {
+ await backend(page);
+ let values: Record<string,unknown> = {};
+ await page.route('**/rest/v1/rpc/resolve_invitation',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,...values},invitation})}));
+ const doc=(text:string)=>({type:'doc',content:[{type:'paragraph',content:[{type:'text',text,marks:[{type:'bold'}]}]}]});
+ const cases=[{data:{},one:0,two:0},{data:{quote_one:'  ',quote_two:doc('  ')},one:0,two:0},{data:{quote_one:'Đầu'},one:1,two:0},{data:{quote_two:doc('Cuối')},one:0,two:1},{data:{quote_one:'Đầu',quote_two:doc('<img src=x onerror=alert(1)>')},one:1,two:1}];
+ for(const c of cases){values=c.data;await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();await expect(page.locator('.invitation-quote-one')).toHaveCount(c.one);await expect(page.locator('.invitation-quote-two')).toHaveCount(c.two);await expect(page.locator('.invitation-quote-two img')).toHaveCount(0);}
+});
