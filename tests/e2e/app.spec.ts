@@ -1280,19 +1280,16 @@ test('role directory loading, empty and denied states (mock API)',async({page})=
  await page.route('**/rest/v1/rpc/role_directory',r=>r.fulfill({status:403,contentType:'application/json',body:JSON.stringify({code:'42501',message:'Content access required'})}));
  await page.reload();await expect(page.getByRole('heading',{name:'Không thể tải dữ liệu'})).toBeVisible();
 });
-test('MP3 floating controls handle blocked autoplay on desktop and mobile (mock audio)',async({page})=>{
+test('MP3 stays hidden and retries blocked autoplay on natural interaction',async({page})=>{
  await backend(page);
  await page.route('**/rest/v1/rpc/resolve_invitation',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,music_path:'fixture/track/song.mp3'},invitation})}));
  await page.route('**/storage/v1/object/sign/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({signedURL:'/object/sign/bookclub-music/fixture/track/song.mp3?token=fixture'})}));
- await page.addInitScript(()=>{let blocked=true;HTMLMediaElement.prototype.play=function(){if(blocked){blocked=false;return Promise.reject(new DOMException('blocked','NotAllowedError'))}this.dispatchEvent(new Event('playing'));return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){this.dispatchEvent(new Event('pause'))};});
+ await page.addInitScript(()=>{HTMLMediaElement.prototype.play=function(){const count=Number(this.dataset.attempts??0)+1;this.dataset.attempts=String(count);if(count===1)return Promise.reject(new DOMException('blocked','NotAllowedError'));return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){};HTMLMediaElement.prototype.load=function(){};});
  await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();
- const panel=page.getByRole('complementary',{name:'Nhạc nền'});await expect(panel.getByRole('button',{name:'Bật nhạc'})).toBeVisible();
- await expect(panel.locator('audio')).toHaveJSProperty('loop',true);await expect(panel.locator('audio')).toHaveJSProperty('volume',.35);
- await panel.getByRole('button',{name:'Bật nhạc'}).click();await expect(panel.getByRole('button',{name:'Tạm dừng'})).toBeVisible();
- await panel.getByRole('slider').fill('70');await expect(panel.locator('audio')).toHaveJSProperty('volume',.7);
- await panel.getByRole('button',{name:'Tắt tiếng'}).click();await expect(panel.locator('audio')).toHaveJSProperty('muted',true);
- await panel.getByRole('button',{name:'Tạm dừng'}).click();await expect(panel.getByRole('button',{name:'Phát nhạc'})).toBeVisible();
- expect(await panel.evaluate(el=>getComputedStyle(el).position)).toBe('fixed');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ const audio=page.locator('.invitation audio');await expect(audio).toHaveAttribute('data-attempts','1');await expect(audio).toBeHidden();await expect(audio).toHaveJSProperty('loop',true);await expect(audio).toHaveJSProperty('volume',.35);
+ await page.locator('.invitation h1').click();await expect(audio).toHaveAttribute('data-attempts','2');await page.locator('.invitation h1').click();await expect(audio).toHaveAttribute('data-attempts','2');
+ await expect(page.locator('.background-audio')).toHaveCount(0);await expect(page.getByRole('button',{name:/^(Tạm dừng|Phát nhạc|Bật nhạc|Tắt tiếng|Bật tiếng)$/})).toHaveCount(0);await expect(page.getByRole('slider',{name:'Âm lượng'})).toHaveCount(0);
+ expect(await page.locator('.invitation').evaluate(el=>getComputedStyle(el).paddingBottom)).not.toBe('120px');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
 test('MP3 editor uploads replaces removes and rejects invalid files (mock Storage)',async({page})=>{
  await backend(page,true);
@@ -1326,10 +1323,10 @@ test('MP3 decodes and plays real audio bytes without a media mock',async({page})
  await page.route('**/rest/v1/rpc/resolve_invitation',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,music_path:'fixture/track/tone.mp3'},invitation})}));
  await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({signedURL:'/object/sign/bookclub-music/fixture/track/tone.mp3?token=fixture'})}):route.fulfill({status:200,contentType:'audio/mpeg',body:bytes}));
  await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();
- const panel=page.getByRole('complementary',{name:'Nhạc nền'});const audio=panel.locator('audio');
+ const audio=page.locator('.invitation audio');
  await expect.poll(()=>audio.evaluate((el:HTMLAudioElement)=>el.readyState)).toBeGreaterThanOrEqual(2);
  await expect(audio).toHaveJSProperty('loop',true);await expect(audio).toHaveJSProperty('volume',.35);
- const play=panel.getByRole('button',{name:/^(Phát nhạc|Bật nhạc)$/});if(await play.isVisible())await play.click();
- await expect(panel.getByRole('button',{name:'Tạm dừng'})).toBeVisible();await expect.poll(()=>audio.evaluate((el:HTMLAudioElement)=>el.currentTime)).toBeGreaterThan(0);
- await panel.getByRole('button',{name:'Tạm dừng'}).click();await expect(audio).toHaveJSProperty('paused',true);await expect(audio).toHaveJSProperty('error',null);
+ await page.locator('.invitation h1').click();
+ await expect(audio).toBeHidden();await expect.poll(()=>audio.evaluate((el:HTMLAudioElement)=>el.currentTime)).toBeGreaterThan(0);
+ await audio.evaluate((el:HTMLAudioElement)=>el.pause());await expect(audio).toHaveJSProperty('paused',true);await expect(audio).toHaveJSProperty('error',null);
 });
