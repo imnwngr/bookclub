@@ -1,4 +1,5 @@
-import { youtubeVideoId } from "../lib/youtube";
+import { MusicEditor } from "../components/MusicEditor";
+import { uploadMusic, discardMusic } from "../features/events/music";
 import { RichQuoteEditor } from "../components/RichQuoteEditor";
 import { LocationMethodIcon } from "../components/LocationMethodIcon";
 import { useEffect, useState } from "react";
@@ -79,7 +80,7 @@ function EventEditor({
     title: "",
     description: "",
     description_rich: null,
-    youtube_url: "",
+    music_path: null,
     quote_one: "",
     quote_two: null,
     starts_at: "",
@@ -112,12 +113,13 @@ function EventEditor({
     formState: { errors, isDirty },
   } = form;
   const [selected, setSelected] = useState(invitations.map((i) => i.guest_id));
+  const [musicFile,setMusicFile]=useState<File|null>(null);
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const selectionDirty =
     JSON.stringify([...selected].sort()) !==
     JSON.stringify(invitations.map((i) => i.guest_id).sort());
-  const dirty = isDirty || selectionDirty || imageFile !== null;
+  const dirty = isDirty || selectionDirty || imageFile !== null || musicFile !== null;
   const blocker = useBlocker(dirty && !saving);
   useEffect(() => {
     const guard = (e: BeforeUnloadEvent) => {
@@ -177,15 +179,20 @@ function EventEditor({
             });
             return;
           }
-          if (values.youtube_url) values.youtube_url = `https://www.youtube.com/watch?v=${youtubeVideoId(values.youtube_url)}`;
           setSaving(true);
           let uploaded: string | null = null;
+          let musicUploaded:string|null=null;
+          let savedSuccessfully=false;
           try {
             if (imageFile) {
               uploaded = await uploadVenueImage(imageFile);
               values.venue_image_path = uploaded;
             }
+            if(musicFile){musicUploaded=await uploadMusic(musicFile);values.music_path=musicUploaded;}
             const saved = await saveEvent(values, selected, event);
+            savedSuccessfully=true;
+            setMusicFile(null);
+            if(event?.music_path && event.music_path!==saved.music_path){try{await discardMusic(event.music_path)}catch{toast.error("Đã lưu; nhạc cũ còn trong danh sách dọn nhạc tạm.")}}
             setImageFile(null);
             if (
               event?.venue_image_path &&
@@ -203,6 +210,7 @@ function EventEditor({
             toast.success("Đã lưu sự kiện");
             navigate(`/admin/edit/${saved.code}`, { replace: true });
           } catch (error) {
+            if(musicUploaded&&!savedSuccessfully){try{await discardMusic(musicUploaded)}catch{toast.error("Nhạc upload còn trong danh sách dọn nhạc tạm.")}}
             if (uploaded) {
               try {
                 await discardVenueImage(uploaded);
@@ -232,7 +240,7 @@ function EventEditor({
           {field("title", "Tên sự kiện *")}
           <RichQuoteEditor label="Mô tả" value={watch("description_rich") ?? (watch("description") ? {type:"doc",content:watch("description").split("\n").map(text => ({type:"paragraph",content:text ? [{type:"text",text}] : []}))} : null)} onChange={v => { change("description_rich", v); change("description", ""); }} />
           {errors.description_rich && <span className="field-error">{String(errors.description_rich.message)}</span>}
-          <label>URL nhạc YouTube (tùy chọn)<input type="url" {...register("youtube_url")} aria-invalid={!!errors.youtube_url} />{errors.youtube_url && <span className="field-error">{errors.youtube_url.message}</span>}</label>
+          <MusicEditor file={musicFile} path={watch("music_path")} onChange={(file,remove)=>{setMusicFile(file);if(remove)change("music_path",null)}} />
           <label>Quote 1 — Nội dung<textarea rows={4} maxLength={5000} {...register("quote_one")} /></label>
           {watch("quote_one")?.trim() && <blockquote className="quote-one-preview">{watch("quote_one")}<footer>CLB Sinh viên Yêu thích Sách</footer></blockquote>}
           <RichQuoteEditor value={watch("quote_two")} onChange={v => change("quote_two", v)} />
@@ -342,6 +350,7 @@ function EventEditor({
               disabled={saving}
               onClick={() => {
                 form.reset();
+                setMusicFile(null);
                 setImageFile(null);
                 setSelected(invitations.map((i) => i.guest_id));
               }}

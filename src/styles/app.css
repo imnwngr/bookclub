@@ -1323,7 +1323,5 @@ html:has(.dirty-save-bar) {
 
 .admin-navigation{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;padding:1rem 0}.admin-navigation a,.admin-navigation button{display:inline-flex;gap:.4rem;align-items:center;min-height:44px}.admin-navigation a.active{font-weight:700;text-decoration:underline}.admin .panel strong{overflow-wrap:anywhere}
 .invitation-music { width: min(100%, 560px); margin: 2rem auto; padding: 1rem; }
-.youtube-player { width: 100%; min-width: 200px; min-height: 200px; }
-.youtube-player iframe { display: block; width: 100%; min-width: 200px; height: 200px; border: 0; }
-.youtube-controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .75rem; }
-.youtube-controls label { display: flex; align-items: center; gap: .5rem; }
+
+.background-audio{position:fixed;z-index:40;bottom:max(12px,env(safe-area-inset-bottom));right:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;max-width:calc(100vw - 24px);padding:10px;background:#f7f4ed;color:#173f36;border:1px solid #173f36;border-radius:8px;box-shadow:0 3px 14px #0002}.background-audio button{min-height:44px}.background-audio label{font-size:12px;max-width:115px}.background-audio input{width:100%}.invitation:has(.background-audio){padding-bottom:120px}

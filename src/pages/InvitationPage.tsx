@@ -1,4 +1,4 @@
-import { YouTubePlayer } from "../components/YouTubePlayer";
+import { BackgroundAudio } from "../components/BackgroundAudio";
 import { RichDocument } from "../components/InvitationQuoteTwo";
 import { InvitationQuoteTwo } from "../components/InvitationQuoteTwo";
 import { Heart } from "lucide-react";
@@ -68,7 +68,7 @@ export default function InvitationPage() {
               Xem thời gian và địa điểm ↓
             </a>
           </section>
-          {event.youtube_url && <YouTubePlayer url={event.youtube_url} />}
+          {event.music_path && <BackgroundAudio key={event.music_path} path={event.music_path} />}
           <MeetingSchedule event={event} />
           {!!event.quote_one?.trim() && <section className="invitation-quote-one"><Heart aria-hidden="true" size={24} /><blockquote>{event.quote_one}</blockquote><p>CLB Sinh viên Yêu thích Sách</p></section>}
           {!!event.agenda?.length && (

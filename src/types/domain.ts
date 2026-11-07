@@ -12,7 +12,7 @@ export interface ClubEvent {
   title: string;
   description: string;
   description_rich?: unknown;
-  youtube_url?: string | null;
+  music_path?: string | null;
   quote_one?: string;
   quote_two?: unknown;
   starts_at: string;

@@ -1,3 +1,4 @@
+import {discardMusic} from "./music";
 import { db } from "../../lib/supabase";
 import type {
   ClubEvent,
@@ -71,9 +72,9 @@ export async function saveEvent(
   guestIds: string[],
   existing?: ClubEvent,
 ) {
-  if (event.description_rich || existing?.description_rich || event.youtube_url || existing?.youtube_url) {
-    const capability = await db().from("events").select("description_rich,youtube_url").limit(0);
-    if (capability.error) throw Error("Database chưa hỗ trợ mô tả định dạng và nhạc YouTube. Chưa lưu sự kiện.");
+  if (event.description_rich || existing?.description_rich || event.music_path || existing?.music_path) {
+    const capability = await db().from("events").select("description_rich,music_path").limit(0);
+    if (capability.error) throw Error("Database chưa hỗ trợ mô tả định dạng và nhạc MP3. Chưa lưu sự kiện.");
   }
   if (event.quote_one?.trim() || existing?.quote_one?.trim() || event.quote_two || existing?.quote_two) {
     const capability = await db().from("events").select("quote_one,quote_two").limit(0);
@@ -107,12 +108,13 @@ export async function saveEvent(
 export async function deleteEvent(id: string) {
   const before = await db()
     .from("events")
-    .select("venue_image_path")
+    .select("venue_image_path,music_path")
     .eq("id", id)
     .maybeSingle();
   if (before.error) throw before.error;
   const { error } = await db().from("events").delete().eq("id", id);
   if (error) throw error;
+  if(before.data?.music_path){try{await discardMusic(before.data.music_path)}catch{throw Error("Sự kiện đã xóa; nhạc còn trong danh sách dọn file tạm.")}}
   if (before.data?.venue_image_path) {
     try {
       await discardVenueImage(before.data.venue_image_path);

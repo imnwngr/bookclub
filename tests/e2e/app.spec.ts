@@ -1197,7 +1197,7 @@ test("pasted Vietnamese quote formatting survives save and reload (mock API)", a
  await expect(editor.locator("h2 span")).toHaveCSS("color", "rgb(55, 127, 124)");
 });
 
-test("formatted description and YouTube URL survive save and reload (mock API)", async ({ page }) => {
+test("formatted description survive save and reload (mock API)", async ({ page }) => {
  await backend(page, true);
  await page.goto("/bookclub/admin/edit/102026");
  const editor = page.getByRole("textbox", {name: "Mô tả", exact: true});
@@ -1209,61 +1209,15 @@ test("formatted description and YouTube URL survive save and reload (mock API)",
   clipboard.setData("text/plain", "Chào mừng đến với câu lạc bộ");
   element.dispatchEvent(new ClipboardEvent("paste", {clipboardData: clipboard, bubbles: true, cancelable: true}));
  });
- await page.getByLabel("URL nhạc YouTube (tùy chọn)").fill("https://youtu.be/dQw4w9WgXcQ");
  const request = page.waitForRequest(r => r.url().endsWith("/save_event"));
  await page.getByRole("button", {name: "Lưu sự kiện"}).click();
  const payload = (await request).postDataJSON().p_event;
- expect(payload.youtube_url).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
  expect(JSON.stringify(payload.description_rich)).toContain("#377f7c");
  await expect(page.getByText("Đã lưu sự kiện")).toBeVisible();
  await page.reload();
  await expect(page.getByRole("textbox", {name: "Mô tả", exact: true})).toContainText("Chào mừng đến với câu lạc bộ");
  await expect(page.getByRole("textbox", {name: "Mô tả", exact: true}).locator("h2 em")).toHaveText("Chào mừng đến với câu lạc bộ");
  await expect(page.getByRole("textbox", {name: "Mô tả", exact: true}).locator("h2 span")).toHaveCSS("color", "rgb(55, 127, 124)");
- await expect(page.getByLabel("URL nhạc YouTube (tùy chọn)")).toHaveValue("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
- await page.getByLabel("URL nhạc YouTube (tùy chọn)").fill("https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ");
- await page.getByRole("button", {name: "Lưu sự kiện"}).click();
- await expect(page.getByText("Nhập URL video YouTube hợp lệ.")).toBeVisible();
- await page.getByLabel("URL nhạc YouTube (tùy chọn)").fill("");
- await page.getByRole("button", {name: "Lưu sự kiện"}).click();
- await expect(page.getByText("Đã lưu sự kiện")).toBeVisible();
- await page.reload();
- await expect(page.getByLabel("URL nhạc YouTube (tùy chọn)")).toHaveValue("");
-});
-
-test("invitation player handles blocked autoplay and controls (mock YouTube API)", async ({page}) => {
- await backend(page);
- await page.route('**/rest/v1/rpc/resolve_invitation', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,youtube_url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ'},invitation})}));
- await page.route('https://www.youtube.com/iframe_api', route => route.fulfill({contentType:'application/javascript',body:`
- window.playerCalls=[]; window.playerEvents=null;
- window.YT={Player:class {constructor(el,opts){this.events=opts.events;window.playerEvents=opts.events;let iframe=document.createElement('iframe');iframe.title='YouTube video player';el.replaceWith(iframe);setTimeout(()=>opts.events.onReady({target:this}),0)}
- playVideo(){window.playerCalls.push('play');this.events.onAutoplayBlocked({target:this})}
- pauseVideo(){window.playerCalls.push('pause');this.events.onStateChange({target:this,data:2})}
- mute(){window.playerCalls.push('mute')} unMute(){window.playerCalls.push('unmute')}
- setVolume(n){window.playerCalls.push('volume:'+n)} destroy(){} }};
- window.onYouTubeIframeAPIReady();`}));
- await page.goto('/bookclub/102026/nguyen-hoang-vien');
- await expect(page.locator('.invitation-cover')).not.toContainText(/Một lời mời|một cuộc gặp gỡ/i);
- await page.getByRole('button',{name:'Mở thiệp mời'}).click();
- const music=page.getByRole('region',{name:'Nhạc sự kiện'});
- await music.scrollIntoViewIfNeeded();
- await expect(music.getByRole('button',{name:'Bật nhạc'})).toBeVisible();
- await expect(music.getByRole('button',{name:'Tạm dừng'})).toBeDisabled();
- const size=await music.locator('iframe').boundingBox();
- expect(size && size.width>=200 && size.height>=200).toBeTruthy();
- expect(await page.evaluate(() => (window as unknown as {playerCalls:string[]}).playerCalls)).toContain('volume:35');
- await music.getByRole('button',{name:'Bật nhạc'}).click();
- await expect(music.getByRole('button',{name:'Bật nhạc'})).toBeVisible();
- await expect(music.getByRole('button',{name:'Tạm dừng'})).toBeDisabled();
- await page.evaluate(() => {const w=window as unknown as {playerEvents:{onStateChange:(x:{data:number})=>void}};w.playerEvents.onStateChange({data:1});});
- await expect(music.getByRole('button',{name:'Tạm dừng'})).toBeEnabled();
- await music.getByRole('button',{name:'Tạm dừng'}).click();
- await music.getByRole('button',{name:'Tắt tiếng'}).click();
- await music.getByRole('button',{name:'Bật tiếng'}).click();
- await music.getByRole('slider',{name:'Âm lượng'}).fill('60');
- const calls=await page.evaluate(() => (window as unknown as {playerCalls:string[]}).playerCalls);
- expect(calls).toEqual(expect.arrayContaining(['pause','mute','unmute','volume:60']));
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
 
 test("tablet layout and reduced motion preserve readable quotes (mock API)",async ({page}, info)=>{
@@ -1322,4 +1276,57 @@ test('role directory loading, empty and denied states (mock API)',async({page})=
  await page.goto('/bookclub/admin/roles');await expect(page.getByText('Đang tải dữ liệu…')).toBeVisible();release();await expect(page.getByText('Không có tài khoản phù hợp.')).toBeVisible();
  await page.route('**/rest/v1/rpc/role_directory',r=>r.fulfill({status:403,contentType:'application/json',body:JSON.stringify({code:'42501',message:'Content access required'})}));
  await page.reload();await expect(page.getByRole('heading',{name:'Không thể tải dữ liệu'})).toBeVisible();
+});
+test('MP3 floating controls handle blocked autoplay on desktop and mobile (mock audio)',async({page})=>{
+ await backend(page);
+ await page.route('**/rest/v1/rpc/resolve_invitation',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,music_path:'fixture/track/song.mp3'},invitation})}));
+ await page.route('**/storage/v1/object/sign/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({signedURL:'/object/sign/bookclub-music/fixture/track/song.mp3?token=fixture'})}));
+ await page.addInitScript(()=>{let blocked=true;HTMLMediaElement.prototype.play=function(){if(blocked){blocked=false;return Promise.reject(new DOMException('blocked','NotAllowedError'))}this.dispatchEvent(new Event('playing'));return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){this.dispatchEvent(new Event('pause'))};});
+ await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();
+ const panel=page.getByRole('complementary',{name:'Nhạc nền'});await expect(panel.getByRole('button',{name:'Bật nhạc'})).toBeVisible();
+ await expect(panel.locator('audio')).toHaveJSProperty('loop',true);await expect(panel.locator('audio')).toHaveJSProperty('volume',.35);
+ await panel.getByRole('button',{name:'Bật nhạc'}).click();await expect(panel.getByRole('button',{name:'Tạm dừng'})).toBeVisible();
+ await panel.getByRole('slider').fill('70');await expect(panel.locator('audio')).toHaveJSProperty('volume',.7);
+ await panel.getByRole('button',{name:'Tắt tiếng'}).click();await expect(panel.locator('audio')).toHaveJSProperty('muted',true);
+ await panel.getByRole('button',{name:'Tạm dừng'}).click();await expect(panel.getByRole('button',{name:'Phát nhạc'})).toBeVisible();
+ expect(await panel.evaluate(el=>getComputedStyle(el).position)).toBe('fixed');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});
+test('MP3 editor uploads replaces removes and rejects invalid files (mock Storage)',async({page})=>{
+ await backend(page,true);
+ const uploads:string[]=[];const removed:string[]=[];
+ await page.route('**/storage/v1/**',async route=>{
+  const request=route.request();const url=new URL(request.url());
+  if(url.pathname.includes('/object/sign/'))return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({signedURL:'/object/sign/bookclub-music/fixture.mp3?token=test'})});
+  if(request.method()==='POST'&&url.pathname.includes('/object/bookclub-music/')){uploads.push(decodeURIComponent(url.pathname.split('/object/bookclub-music/')[1]));return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({Key:uploads.at(-1)})});}
+  if(request.method()==='DELETE'){removed.push(...request.postDataJSON().prefixes);return route.fulfill({status:200,contentType:'application/json',body:'[]'});}
+  return route.fulfill({status:200,body:''});
+ });
+ await page.route('**/rest/v1/rpc/unused_music',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(uploads.map(path=>({path})))}));
+ await page.goto('/bookclub/admin/edit/102026');
+ const chooser=page.getByLabel('Chọn hoặc thay MP3 (tối đa 20 MB)');
+ await chooser.setInputFiles({name:'bad.mp3',mimeType:'audio/mpeg',buffer:Buffer.from('not audio')});
+ await expect(page.getByRole('alert')).toContainText('không phải MP3');expect(uploads).toHaveLength(0);
+ for(const name of ['first.mp3','replacement.mp3']){
+  await chooser.setInputFiles({name,mimeType:'audio/mpeg',buffer:Buffer.from([255,251,144,0])});
+  await expect(page.getByRole('status').filter({hasText:'Sẵn sàng upload'})).toBeVisible();
+  await page.getByRole('button',{name:'Lưu sự kiện'}).click();
+  await expect(page.getByText('Đã lưu sự kiện')).toBeVisible();
+  await page.reload();await expect(page.getByText(name,{exact:true})).toBeVisible();
+ }
+ expect(uploads).toHaveLength(2);expect(uploads[0]).not.toBe(uploads[1]);expect(removed).toContain(uploads[0]);
+ await page.getByRole('button',{name:'Xóa nhạc',exact:true}).click();await page.getByRole('button',{name:'Lưu sự kiện'}).click();
+ await expect(page.getByText('Đã lưu sự kiện')).toBeVisible();await page.reload();await expect(page.getByText('Chưa có nhạc',{exact:true})).toBeVisible();expect(removed).toContain(uploads[1]);
+});
+test('MP3 decodes and plays real audio bytes without a media mock',async({page})=>{
+ const {readFileSync}=await import('node:fs');const bytes=readFileSync('tests/fixtures/background-silence.mp3');
+ await backend(page);
+ await page.route('**/rest/v1/rpc/resolve_invitation',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,music_path:'fixture/track/tone.mp3'},invitation})}));
+ await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({signedURL:'/object/sign/bookclub-music/fixture/track/tone.mp3?token=fixture'})}):route.fulfill({status:200,contentType:'audio/mpeg',body:bytes}));
+ await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();
+ const panel=page.getByRole('complementary',{name:'Nhạc nền'});const audio=panel.locator('audio');
+ await expect.poll(()=>audio.evaluate((el:HTMLAudioElement)=>el.readyState)).toBeGreaterThanOrEqual(2);
+ await expect(audio).toHaveJSProperty('loop',true);await expect(audio).toHaveJSProperty('volume',.35);
+ const play=panel.getByRole('button',{name:/^(Phát nhạc|Bật nhạc)$/});if(await play.isVisible())await play.click();
+ await expect(panel.getByRole('button',{name:'Tạm dừng'})).toBeVisible();await expect.poll(()=>audio.evaluate((el:HTMLAudioElement)=>el.currentTime)).toBeGreaterThan(0);
+ await panel.getByRole('button',{name:'Tạm dừng'}).click();await expect(audio).toHaveJSProperty('paused',true);await expect(audio).toHaveJSProperty('error',null);
 });
