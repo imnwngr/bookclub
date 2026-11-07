@@ -97,3 +97,9 @@ describe("validation and URL safety", () => {
     expect(mapLink(fixture)).toBeNull();
   });
 });
+it('preserves interior title line breaks and existing length validation',()=>{
+ const title='Ngày hội sách\nGiao lưu tác giả\nBookClub CTUT';expect(eventSchema.parse({...fixture,title}).title).toBe(title);
+ expect(eventSchema.safeParse({...fixture,title:'Một dòng'}).success).toBe(true);
+ expect(eventSchema.safeParse({...fixture,title:'x'.repeat(241)}).success).toBe(false);
+ expect(eventSchema.safeParse({...fixture,title:' \n '} ).success).toBe(false);
+});

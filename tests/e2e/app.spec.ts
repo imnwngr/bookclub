@@ -1330,3 +1330,20 @@ test('MP3 decodes and plays real audio bytes without a media mock',async({page})
  await expect(audio).toBeHidden();await expect.poll(()=>audio.evaluate((el:HTMLAudioElement)=>el.currentTime)).toBeGreaterThan(0);
  await audio.evaluate((el:HTMLAudioElement)=>el.pause());await expect(audio).toHaveJSProperty('paused',true);await expect(audio).toHaveJSProperty('error',null);
 });
+test('multiline event title grows saves reloads and displays without horizontal overflow',async({page})=>{
+ await backend(page,true);let savedTitle=event.title;let saves=0;
+ await page.route('**/rest/v1/rpc/save_event',async route=>{savedTitle=route.request().postDataJSON().p_event.title;saves++;await route.fallback()});
+ await page.route('**/rest/v1/events?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify([{...event,title:savedTitle}])}));
+ await page.route('**/rest/v1/rpc/resolve_invitation',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,title:savedTitle},invitation})}));
+ await page.goto('/bookclub/admin/edit/102026');const title=page.getByLabel('Tên sự kiện *');await expect(title).toHaveJSProperty('tagName','TEXTAREA');
+ await title.fill('Ngày hội sách');const shortHeight=await title.evaluate(el=>el.getBoundingClientRect().height);await title.press('End');await title.press('Enter');await title.pressSequentially('Giao lưu tác giả');await title.press('Enter');await title.pressSequentially('BookClub CTUT');
+ const multiline='Ngày hội sách\nGiao lưu tác giả\nBookClub CTUT';await expect(title).toHaveValue(multiline);expect(saves).toBe(0);expect(await title.evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThan(shortHeight);
+ await page.getByRole('button',{name:'Lưu sự kiện',exact:true}).click();await expect(page.getByText('Đã lưu sự kiện',{exact:true})).toBeVisible();expect(savedTitle).toBe(multiline);await page.reload();await expect(title).toHaveValue(multiline);
+ const check=async(selector:string,expected:string)=>{const node=page.locator(selector).first();await expect(node).toBeVisible();expect(await node.textContent()).toBe(expected);await expect(node).toHaveCSS('white-space','pre-line');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)};
+ await page.goto('/bookclub/');await check('.event-row .event-title',multiline);const documentTitle=await page.title();expect(documentTitle).not.toContain('\n');
+ await page.goto('/bookclub/admin');await check('.admin-list .event-title',multiline);
+ await page.goto('/bookclub/102026');await check('.detail .event-title',multiline);
+ await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();await check('.invitation-greeting .event-title',multiline);await check('.calendar-card .event-title',multiline);
+ await page.goto('/bookclub/admin/edit/102026');await title.fill('X'.repeat(240));expect(await title.evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThan(shortHeight);await page.getByRole('button',{name:'Lưu sự kiện',exact:true}).click();await expect(page.getByText('Đã lưu sự kiện',{exact:true})).toBeVisible();await page.reload();await expect(title).toHaveValue('X'.repeat(240));
+ await page.goto('/bookclub/');await check('.event-row .event-title','X'.repeat(240));await page.goto('/bookclub/102026');await check('.detail .event-title','X'.repeat(240));await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();await check('.invitation-greeting .event-title','X'.repeat(240));await check('.calendar-card .event-title','X'.repeat(240));
+});

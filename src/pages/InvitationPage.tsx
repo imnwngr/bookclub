@@ -62,7 +62,7 @@ export default function InvitationPage() {
                 ? "BookClub thân mời các thành viên và cộng tác viên cùng tham gia"
                 : "Câu lạc bộ Sinh viên Yêu thích Sách trân trọng kính mời quý vị đến tham dự"}
             </p>
-            <h2>{event.title}</h2>
+            <h2 className="event-title">{event.title}</h2>
             {event.description_rich ? <div className="prose"><RichDocument value={event.description_rich} /></div> : event.description && <p className="prose">{event.description}</p>}
             <a className="section-next" href="#invitation-schedule">
               Xem thời gian và địa điểm ↓

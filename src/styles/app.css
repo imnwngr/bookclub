@@ -1323,3 +1323,8 @@ html:has(.dirty-save-bar) {
 
 .admin-navigation{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;padding:1rem 0}.admin-navigation a,.admin-navigation button{display:inline-flex;gap:.4rem;align-items:center;min-height:44px}.admin-navigation a.active{font-weight:700;text-decoration:underline}.admin .panel strong{overflow-wrap:anywhere}
 .invitation-music { width: min(100%, 560px); margin: 2rem auto; padding: 1rem; }
+
+.event-title { white-space: pre-line; overflow-wrap: anywhere; min-width: 0; }
+.event-row > div { min-width: 0; }
+.event-title-input { resize: none; overflow-y: hidden; overflow-wrap: anywhere; }
+.event-title-input[aria-invalid="true"] { border-color: #982c23; }

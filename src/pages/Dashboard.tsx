@@ -84,7 +84,7 @@ export default function Dashboard() {
               <span className="status">
                 {event.status === "published" ? "Đã công bố" : "Bản nháp"}
               </span>
-              <h2>{event.title}</h2>
+              <h2 className="event-title">{event.title}</h2>
               <p>
                 {event.code} · {formatDate(event.starts_at)}
               </p>
@@ -138,7 +138,7 @@ export default function Dashboard() {
             }
           }}
         >
-          Sự kiện “{deleting.title}” và thiệp liên quan sẽ bị xóa. Danh bạ khách
+          Sự kiện “<span className="event-title">{deleting.title}</span>” và thiệp liên quan sẽ bị xóa. Danh bạ khách
           mời được giữ lại.
         </Confirm>
       )}

@@ -32,7 +32,7 @@ export default function EventDetail() {
       <p className={`status ${eventStatus(event, now)}`}>
         {statusLabels[eventStatus(event, now)]}
       </p>
-      <h1>{event.title}</h1>
+      <h1 className="event-title">{event.title}</h1>
       {event.description_rich ? <div className="prose"><RichDocument value={event.description_rich} /></div> : event.description && <p className="prose">{event.description}</p>}
       <EventInfo event={event} />
       <p className="footnote">

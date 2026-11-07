@@ -99,7 +99,7 @@ export default function Home() {
                     <span className={`status ${eventStatus(e, now)}`}>
                       {statusLabels[eventStatus(e, now)]}
                     </span>
-                    <h3>
+                    <h3 className="event-title">
                       <Link to={`/${e.code}`}>{e.title}</Link>
                     </h3>
                     <p>{formatDate(e.starts_at)}</p>

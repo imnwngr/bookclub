@@ -1,3 +1,4 @@
+import { AutoGrowingTextarea } from "../components/AutoGrowingTextarea";
 import { MusicEditor } from "../components/MusicEditor";
 import { uploadMusic, discardMusic } from "../features/events/music";
 import { RichQuoteEditor } from "../components/RichQuoteEditor";
@@ -237,7 +238,7 @@ function EventEditor({
         />
         <fieldset>
           <legend>Thông tin sự kiện</legend>
-          {field("title", "Tên sự kiện *")}
+          <label>Tên sự kiện *<AutoGrowingTextarea {...register("title")} value={watch("title")} aria-label="Tên sự kiện *" aria-invalid={!!errors.title} />{errors.title && <span className="field-error">{errors.title.message}</span>}</label>
           <RichQuoteEditor label="Mô tả" value={watch("description_rich") ?? (watch("description") ? {type:"doc",content:watch("description").split("\n").map(text => ({type:"paragraph",content:text ? [{type:"text",text}] : []}))} : null)} onChange={v => { change("description_rich", v); change("description", ""); }} />
           {errors.description_rich && <span className="field-error">{String(errors.description_rich.message)}</span>}
           <MusicEditor file={musicFile} path={watch("music_path")} onChange={(file,remove)=>{setMusicFile(file);if(remove)change("music_path",null)}} />
