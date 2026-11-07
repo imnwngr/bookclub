@@ -642,6 +642,9 @@ test("v1.1 auto code, Place ID and editable code use correct save payloads (mock
   expect(payload.starts_at).toBe("2099-10-20T06:00:00.000Z");
   expect(payload.location_method).toBe("place");
   await expect(page).toHaveURL(/admin\/edit\/hop-mat-chao-don$/);
+  await expect(page.getByText("Đã lưu sự kiện", { exact: true })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(page.getByText("Đã lưu sự kiện", { exact: true })).toBeHidden({ timeout: 10000 });
   await page.getByLabel("Mã sự kiện", { exact: true }).fill("ma-moi");
   const second = page.waitForRequest((r) => r.url().endsWith("/save_event"));
   await page.getByRole("button", { name: "Lưu sự kiện", exact: true }).click();
