@@ -368,6 +368,7 @@ test("login and logout require authentication (mock API)", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Quản lý sự kiện", exact: true }),
   ).toBeVisible();
+  if (await page.getByRole("button", { name: "Điều hướng", exact: true }).isVisible()) await page.getByRole("button", { name: "Điều hướng", exact: true }).click();
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Đăng nhập", exact: true }),
@@ -727,8 +728,8 @@ test("refinement cover descriptions, scroll sections, keyboard and long mobile c
     page.locator(".invitation-greeting .guest-description > span"),
   ).toHaveCount(3);
   // This legacy event has no quotes; venue details belong only to the schedule card.
-  await expect(page.locator(".invitation-content > .invitation-section")).toHaveCount(3);
-  expect(await page.locator(".invitation-content > .invitation-section").evaluateAll(sections => sections.map(section => section.id))).toEqual(["invitation-greeting", "invitation-schedule", "invitation-program"]);
+  await expect(page.locator(".invitation-content .invitation-section")).toHaveCount(4);
+  expect(await page.locator(".invitation-content .invitation-section").evaluateAll(sections => sections.map(section => section.id))).toEqual(["invitation-greeting", "invitation-event", "invitation-schedule", "invitation-program"]);
   await expect(page.locator("#invitation-venue,.meeting-venue")).toHaveCount(0);
   await expect(page.locator("#invitation-schedule .venue-card")).toHaveCount(1);
   await expect(page.locator("#invitation-schedule .venue-detail")).toContainText("Đi theo bảng hướng dẫn tại sảnh.");
@@ -854,7 +855,7 @@ test("refinement long sections remain scrollable in both directions, empty secti
   );
   await page.reload();
   await page.getByRole("button", { name: "Mở thiệp mời" }).click();
-  await expect(page.locator(".invitation-section")).toHaveCount(2);
+  await expect(page.locator(".invitation-section")).toHaveCount(3);
   await expect(
     page.locator("#invitation-program,#invitation-venue"),
   ).toHaveCount(0);
@@ -1002,7 +1003,7 @@ test("guest directory compact/full, dirty guard, reorder and reload (mock API)",
   await page.getByLabel("Họ tên hoặc tên nhóm *").fill("Tên chưa lưu");
   if (info.project.name === "mobile") await page.getByRole("button", { name:"Danh sách khách mời", exact:true }).click();
   await page.getByRole("button", {name:"Chỉnh sửa khách mời Khách 1", exact:true}).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Thay đổi chưa được lưu" })).toBeVisible();
   await page.getByRole("button",{name:"Tiếp tục chỉnh sửa"}).click();
   await expect(page.getByLabel("Họ tên hoặc tên nhóm *")).toHaveValue("Tên chưa lưu");
   if (info.project.name === "mobile") await page.getByRole("button",{name:"Đóng",exact:true}).click();
@@ -1147,7 +1148,7 @@ test("quote sections follow schedule and program without duplicate venue (mock A
  const quoteTwo={type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"Lời nhắn cuối"}]}]};
  await page.route("**/rest/v1/rpc/resolve_invitation",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({event:{...event,quote_one:"Lời nhắn đầu",quote_two:quoteTwo,venue_image_path:null,agenda:[{time:"08:00",description:"Đón khách",highlight:false}]},invitation})}));
  await page.goto("/bookclub/102026/nguyen-hoang-vien");await page.getByRole("button",{name:"Mở thiệp mời"}).click();
- const order=await page.locator(".invitation-content").evaluate(el=>Array.from(el.children).map(c=>c.className));
+ const order=await page.locator(".invitation-content").evaluate(el=>Array.from(el.querySelectorAll('.meeting-schedule, .invitation-quote-one, .invitation-program, .invitation-quote-two')).map(c=>c.className));
  expect(order.indexOf("invitation-quote-one")).toBeGreaterThan(order.indexOf("invitation-section meeting-schedule"));
  expect(order.indexOf("invitation-quote-two")).toBeGreaterThan(order.indexOf("invitation-section invitation-program"));
  await expect(page.locator(".meeting-venue")).toHaveCount(0);
@@ -1254,7 +1255,9 @@ for(const role of ['admin','editor'])test('role directory '+role+' controls and 
  await page.route('**/rest/v1/rpc/role_directory',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify([{user_id:'admin-fixture',email:'admin@example.invalid',role:'admin',status:'confirmed'},{user_id:'editor-fixture',email:'editor@example.invalid',role:'editor',status:'invited'}])}));
  await page.goto('/bookclub/admin/roles');await expect(page.getByRole('heading',{name:'Quản lý vai trò'})).toBeVisible();
  await expect(page.getByText('admin@example.invalid',{exact:true})).toBeVisible();
+ const drawerTrigger=page.getByRole('button',{name:'Điều hướng',exact:true});if(await drawerTrigger.isVisible())await drawerTrigger.click();
  const nav=page.getByRole('navigation',{name:'Quản trị'});await expect(nav.getByRole('link')).toHaveText(['Sự kiện','Danh bạ khách mời','Quản lý vai trò']);
+ if(await page.getByRole('button',{name:'Đóng điều hướng',exact:true}).isVisible())await page.getByRole('button',{name:'Đóng điều hướng',exact:true}).click();
  if(role==='admin'){await expect(page.getByRole('button',{name:'Thu hồi Editor'})).toHaveCount(1);await page.getByRole('button',{name:'Thêm tài khoản'}).click();await expect(page.getByRole('dialog')).toBeVisible();await expect(page.getByRole('dialog').getByLabel('Vai trò').locator('option')).toHaveText(['Editor']);await page.getByRole('button',{name:'Hủy',exact:true}).click();}
  else {await expect(page.getByRole('button',{name:'Thêm tài khoản'})).toHaveCount(0);await expect(page.getByRole('button',{name:'Thu hồi Editor'})).toHaveCount(0);}
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
@@ -1280,16 +1283,33 @@ test('role directory loading, empty and denied states (mock API)',async({page})=
  await page.route('**/rest/v1/rpc/role_directory',r=>r.fulfill({status:403,contentType:'application/json',body:JSON.stringify({code:'42501',message:'Content access required'})}));
  await page.reload();await expect(page.getByRole('heading',{name:'Không thể tải dữ liệu'})).toBeVisible();
 });
-test('MP3 stays hidden and retries blocked autoplay on natural interaction',async({page})=>{
+test('MP3 autoplay respects blocking and offers opening gesture and icon-only manual fallback',async({page})=>{
  await backend(page);
  await page.route('**/rest/v1/rpc/resolve_invitation',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({event:{...event,music_path:'fixture/track/song.mp3'},invitation})}));
  await page.route('**/storage/v1/object/sign/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({signedURL:'/object/sign/bookclub-music/fixture/track/song.mp3?token=fixture'})}));
- await page.addInitScript(()=>{HTMLMediaElement.prototype.play=function(){const count=Number(this.dataset.attempts??0)+1;this.dataset.attempts=String(count);if(count===1)return Promise.reject(new DOMException('blocked','NotAllowedError'));return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){};HTMLMediaElement.prototype.load=function(){};});
- await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();
- const audio=page.locator('.invitation audio');await expect(audio).toHaveAttribute('data-attempts','1');await expect(audio).toBeHidden();await expect(audio).toHaveJSProperty('loop',true);await expect(audio).toHaveJSProperty('volume',.35);
- await page.locator('.invitation h1').click();await expect(audio).toHaveAttribute('data-attempts','2');await page.locator('.invitation h1').click();await expect(audio).toHaveAttribute('data-attempts','2');
- await expect(page.locator('.background-audio')).toHaveCount(0);await expect(page.getByRole('button',{name:/^(Tạm dừng|Phát nhạc|Bật nhạc|Tắt tiếng|Bật tiếng)$/})).toHaveCount(0);await expect(page.getByRole('slider',{name:'Âm lượng'})).toHaveCount(0);
- expect(await page.locator('.invitation').evaluate(el=>getComputedStyle(el).paddingBottom)).not.toBe('120px');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await page.addInitScript(()=>{
+  Object.defineProperty(HTMLMediaElement.prototype,'paused',{configurable:true,get(){return this.dataset.simulatedPlaying!=='true'}});
+  HTMLMediaElement.prototype.play=function(){const count=Number(this.dataset.attempts??0)+1;this.dataset.attempts=String(count);if(count<=2)return Promise.reject(new DOMException('blocked','NotAllowedError'));this.dataset.simulatedPlaying='true';this.dispatchEvent(new Event('playing'));return Promise.resolve()};
+  HTMLMediaElement.prototype.pause=function(){this.dataset.simulatedPlaying='false';this.dispatchEvent(new Event('pause'))};
+  HTMLMediaElement.prototype.load=function(){};
+ });
+ await page.goto('/bookclub/102026/nguyen-hoang-vien');
+ const audio=page.locator('.invitation audio');
+ await expect(audio).toHaveAttribute('data-attempts','1');
+ await expect(audio).toHaveJSProperty('volume',.25);
+ await page.getByRole('button',{name:'Mở thiệp mời'}).click();
+ await expect(audio).toHaveAttribute('data-attempts','2');
+ await page.locator('.invitation h1').click();
+ await expect(audio).toHaveAttribute('data-attempts','2');
+ await page.getByRole('button',{name:'Mở điều khiển nhạc'}).click();
+ await page.getByRole('button',{name:'Phát nhạc',exact:true}).click();
+ await expect(audio).toHaveAttribute('data-attempts','3');
+ await expect(page.getByRole('button',{name:'Tạm dừng',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:'Tạm dừng',exact:true}).click();
+ await expect(audio).toHaveJSProperty('paused',true);
+ await expect(page.locator('.music-capsule')).toHaveText('');
+ await expect(audio).toBeHidden();await expect(audio).toHaveJSProperty('loop',true);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
 test('MP3 editor uploads replaces removes and rejects invalid files (mock Storage)',async({page})=>{
  await backend(page,true);
@@ -1324,8 +1344,12 @@ test('MP3 decodes and plays real audio bytes without a media mock',async({page})
  await page.route('**/storage/v1/object/sign/**',route=>route.request().method()==='POST'?route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({signedURL:'/object/sign/bookclub-music/fixture/track/tone.mp3?token=fixture'})}):route.fulfill({status:200,contentType:'audio/mpeg',body:bytes}));
  await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();
  const audio=page.locator('.invitation audio');
+ if(await audio.evaluate((el:HTMLAudioElement)=>el.paused)) {
+  await page.getByRole('button',{name:'Mở điều khiển nhạc'}).click();
+  await page.getByRole('button',{name:'Phát nhạc',exact:true}).click();
+ }
  await expect.poll(()=>audio.evaluate((el:HTMLAudioElement)=>el.readyState)).toBeGreaterThanOrEqual(2);
- await expect(audio).toHaveJSProperty('loop',true);await expect(audio).toHaveJSProperty('volume',.35);
+ await expect(audio).toHaveJSProperty('loop',true);await expect(audio).toHaveJSProperty('volume',.25);
  await page.locator('.invitation h1').click();
  await expect(audio).toBeHidden();await expect.poll(()=>audio.evaluate((el:HTMLAudioElement)=>el.currentTime)).toBeGreaterThan(0);
  await audio.evaluate((el:HTMLAudioElement)=>el.pause());await expect(audio).toHaveJSProperty('paused',true);await expect(audio).toHaveJSProperty('error',null);
@@ -1343,7 +1367,7 @@ test('multiline event title grows saves reloads and displays without horizontal 
  await page.goto('/bookclub/');await check('.event-row .event-title',multiline);const documentTitle=await page.title();expect(documentTitle).not.toContain('\n');
  await page.goto('/bookclub/admin');await check('.admin-list .event-title',multiline);
  await page.goto('/bookclub/102026');await check('.detail .event-title',multiline);
- await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();await check('.invitation-greeting .event-title',multiline);await check('.calendar-card .event-title',multiline);
+ await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();await check('.invitation-event .event-title',multiline);await check('.calendar-card .event-title',multiline);
  await page.goto('/bookclub/admin/edit/102026');await title.fill('X'.repeat(240));expect(await title.evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThan(shortHeight);await page.getByRole('button',{name:'Lưu sự kiện',exact:true}).click();await expect(page.getByText('Đã lưu sự kiện',{exact:true})).toBeVisible();await page.reload();await expect(title).toHaveValue('X'.repeat(240));
- await page.goto('/bookclub/');await check('.event-row .event-title','X'.repeat(240));await page.goto('/bookclub/102026');await check('.detail .event-title','X'.repeat(240));await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();await check('.invitation-greeting .event-title','X'.repeat(240));await check('.calendar-card .event-title','X'.repeat(240));
+ await page.goto('/bookclub/');await check('.event-row .event-title','X'.repeat(240));await page.goto('/bookclub/102026');await check('.detail .event-title','X'.repeat(240));await page.goto('/bookclub/102026/nguyen-hoang-vien');await page.getByRole('button',{name:'Mở thiệp mời'}).click();await check('.invitation-event .event-title','X'.repeat(240));await check('.calendar-card .event-title','X'.repeat(240));
 });

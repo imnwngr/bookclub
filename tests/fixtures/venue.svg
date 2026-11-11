@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
+  <rect width="960" height="600" fill="#e8e4d8"/>
+  <path fill="#173f36" d="M60 60h840v390H60z"/>
+  <path fill="#c8a76a" d="M75 70h15v370H75zm390 0h15v370h-15zm405 0h15v370h-15zM75 245h810v12H75zM75 420h810v12H75z"/>
+  <g fill="#f7f4ed"><path d="M110 100h36v145h-36zm50 20h24v125h-24zm40-25h50v150h-50zm80 15h26v135h-26zm45 5h45v130h-45zm60-20h36v150h-36zM505 110h34v135h-34zm50-10h50v145h-50zm75 20h24v125h-24zm40-20h45v145h-45zm70 10h32v135h-32zm45-15h48v150h-48z"/><path opacity=".65" d="M110 280h38v140h-38zm55 0h28v140h-28zm40 10h50v130h-50zm90-20h30v150h-30zm45 15h45v135h-45zM515 280h28v140h-28zm42-10h50v150h-50zm80 15h30v135h-30zm45-5h45v140h-45zm70-10h26v150h-26zm45 20h40v130h-40z"/></g>
+  <path d="M130 470h700v25H130z" fill="#b89762"/>
+  <path d="M160 495h15v65h-15zm625 0h15v65h-15z" fill="#80612d"/>
+  <text x="480" y="575" font-family="Arial,sans-serif" font-size="18" text-anchor="middle" fill="#173f36">HÌNH MINH HỌA PHỤC VỤ KIỂM THỬ GIAO DIỆN</text>
+</svg>
