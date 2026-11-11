@@ -1,4 +1,5 @@
 import type { Guest } from "../../types/domain";
+import { useState } from "react";
 export function GuestSelection({
   guests,
   selected,
@@ -8,10 +9,25 @@ export function GuestSelection({
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
-  const visible = guests.filter((g) => g.active || selected.includes(g.id));
+  const [search, setSearch] = useState("");
+  const available = guests.filter((g) => g.active || selected.includes(g.id));
+  const visible = available.filter((g) =>
+    `${g.salutation} ${g.name}`
+      .toLocaleLowerCase("vi")
+      .includes(search.toLocaleLowerCase("vi")),
+  );
   return (
-    <fieldset>
+    <fieldset id="editor-guests">
       <legend>Khách mời của sự kiện</legend>
+      <label>
+        Tìm khách mời
+        <input
+          type="search"
+          placeholder="Tên khách mời hoặc nhóm"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </label>
       <div className="actions">
         <button
           type="button"
@@ -59,7 +75,13 @@ export function GuestSelection({
           </label>
         ))}
       </div>
-      {!visible.length && <p>Danh bạ chưa có khách mời hoạt động.</p>}
+      {!visible.length && (
+        <p>
+          {search
+            ? "Không có khách mời phù hợp với từ khóa."
+            : "Danh bạ chưa có khách mời hoạt động."}
+        </p>
+      )}
     </fieldset>
   );
 }

@@ -20,7 +20,7 @@ export function InvitationManager({
   };
   const lines = invitationLines(code, eventId, invitations);
   return (
-    <section className="invitation-manager">
+    <section className="invitation-manager" id="invitation-links">
       <h2>Thiệp mời</h2>
       <button type="button" disabled={!lines} onClick={() => void copy(lines)}>
         Sao chép tất cả
@@ -28,9 +28,14 @@ export function InvitationManager({
       <p>Mỗi khách mời sử dụng một link thiệp chính đã lưu.</p>
       {invitations.map((i) => (
         <article key={i.id} className="panel invitation-row">
-          <h3>
-            {i.salutation} {i.name}
-          </h3>
+          <div>
+            <h3>
+              {i.salutation} {i.name}
+            </h3>
+            <span className="invitation-url">
+              {invitationUrl(code, i.primary_alias)}
+            </span>
+          </div>
           <div className="actions">
             <a
               href={invitationUrl(code, i.primary_alias)}
