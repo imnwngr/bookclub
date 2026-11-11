@@ -1,0 +1,891 @@
+.site-invitation {
+  background: var(--forest);
+}
+.site-invitation main {
+  display: flow-root;
+}
+.site-invitation .site-header {
+  color: var(--paper);
+  border-bottom-color: color-mix(in srgb, var(--sage) 25%, transparent);
+}
+.site-invitation .site-header small,
+.site-invitation .site-header .admin-link {
+  color: var(--sage);
+}
+.site-invitation .mobile-menu {
+  color: var(--paper);
+  border-color: var(--sage);
+}
+.site-invitation .site-footer {
+  color: var(--paper);
+  border-top-color: color-mix(in srgb, var(--sage) 25%, transparent);
+}
+.site-invitation .footer-signature {
+  color: var(--paper);
+}
+.site-invitation .footer-bottom {
+  color: var(--sage);
+}
+.site-invitation main > .state {
+  color: var(--paper);
+}
+.site-invitation main > .state p {
+  color: var(--sage);
+}
+.site-invitation main > .state h2 {
+  color: var(--paper);
+}
+.site-invitation main > .state .state-illustration {
+  color: var(--paper);
+  border-color: var(--sage);
+}
+.invitation {
+  position: relative;
+  max-width: 1120px;
+  margin: 3rem auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--ink);
+  --inv-cloud: var(--paper);
+  --inv-navy: var(--ink);
+  --inv-teal: var(--brand);
+  --inv-rose: var(--gold-dark);
+  --inv-champagne: var(--gold);
+}
+.invitation.sealed {
+  max-width: 880px;
+}
+.invitation-cover {
+  position: relative;
+  padding: 0 2rem 1.5rem;
+  isolation: isolate;
+}
+.cover-topline {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--sage);
+}
+.envelope-stack {
+  position: relative;
+}
+.envelope-paper {
+  position: relative;
+  padding: clamp(2rem, 5vw, 4rem) clamp(1.25rem, 5vw, 4rem) 3rem;
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  box-shadow: var(--shadow-paper);
+  z-index: 2;
+}
+.envelope-paper::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+.envelope-paper::after {
+  content: "";
+  position: absolute;
+  inset: 20px;
+  border-top: 1px solid var(--gold);
+  border-bottom: 1px solid var(--gold);
+  opacity: 0.4;
+  pointer-events: none;
+}
+.envelope-flap {
+  position: absolute;
+  z-index: 0;
+  inset: 8% -1rem -1rem;
+  background: var(--sage);
+  transform: rotate(-3deg);
+  box-shadow: var(--shadow-paper);
+}
+.envelope-flap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 50% 60%, 100% 0);
+  background: color-mix(in srgb, var(--sage), var(--paper) 30%);
+}
+.invitation-logos {
+  gap: clamp(12px, 3vw, 30px);
+  margin-bottom: 2.5rem;
+}
+.invitation-logos img {
+  width: clamp(40px, 6vw, 64px);
+  height: clamp(40px, 6vw, 64px);
+}
+.invitation-cover .invitation-tagline {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.cover-recipient {
+  margin: 1.5rem auto 1rem;
+  max-width: 650px;
+}
+.cover-recipient span {
+  display: block;
+  font-weight: 400;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.cover-recipient strong {
+  display: block;
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  color: var(--brand);
+}
+.invitation .guest-description {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  max-width: 620px;
+  margin: 1rem auto;
+  color: var(--muted);
+}
+.letter-seal {
+  display: grid;
+  place-content: center;
+  width: 72px;
+  height: 72px;
+  margin: 1.75rem auto 0;
+  border-radius: 50%;
+  color: var(--paper);
+  background: var(--brand);
+  border: 4px double var(--gold);
+  box-shadow: 0 4px 0 var(--border);
+}
+.letter-seal .bookclub-logo {
+  width: 56px;
+}
+.invitation-cover .open-invitation {
+  display: inline-flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  min-height: 50px;
+  padding-inline: 1.5rem;
+  border-radius: 0;
+}
+.cover-postscript {
+  position: relative;
+  z-index: 3;
+  color: var(--sage);
+  font-size: 0.75rem;
+  padding-top: 2rem;
+  margin-bottom: 0;
+}
+.invitation.opened {
+  max-width: 1120px;
+  background: var(--surface);
+  box-shadow: var(--shadow-paper);
+}
+.invitation-content {
+  animation: none;
+}
+.invitation {
+  text-align: center;
+}
+.invitation-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-wrap: anywhere;
+}
+.calendar-card header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-right: 1rem;
+}
+.calendar-months h4 {
+  text-align: center;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  text-align: center;
+}
+.venue-tabs {
+  display: flex;
+}
+.venue-tabs button {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.venue-media {
+  position: relative;
+  overflow: hidden;
+}
+.venue-media a {
+  display: block;
+  height: 100%;
+}
+.venue-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.venue-media strong {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  color: var(--paper);
+  pointer-events: none;
+}
+.venue-map {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  justify-items: center;
+}
+.venue-detail h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.venue-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.venue-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  color: var(--paper);
+}
+.invitation-quote-one {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.invitation-quote-two p {
+  white-space: pre-wrap;
+}
+.invitation-section {
+  padding: clamp(2rem, 7vw, 6rem);
+  min-height: 0;
+  scroll-margin-top: 1rem;
+  scroll-snap-align: none;
+}
+.invitation-greeting {
+  position: relative;
+  min-height: min(800px, 90svh);
+  padding-block: clamp(2.5rem, 6vw, 5rem);
+  border: 1px solid var(--gold);
+}
+.invitation-greeting::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+.invitation-greeting .section-label {
+  margin: 0 0 1.5rem;
+  font-size: 0.8125rem;
+}
+.greeting-salutation {
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+}
+.invitation-greeting h1 {
+  font-size: clamp(2.1rem, 5vw, 4.4rem);
+  color: var(--brand);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  margin: 0 auto 0.75rem;
+}
+.invitation-greeting h1:focus {
+  outline: none;
+}
+.invitation-rule {
+  width: 80px;
+  height: 1px;
+  background: var(--gold);
+  margin: 2rem auto;
+}
+.greeting-message {
+  max-width: 560px;
+  margin: 0 auto 1.5rem;
+  color: var(--muted);
+}
+.invitation-event h2 {
+  font-size: clamp(1.6rem, 3vw, 2.75rem);
+  font-weight: 500;
+  max-width: 780px;
+  margin: 0 auto 1.5rem;
+  letter-spacing: -0.025em;
+}
+.invitation-event .prose {
+  max-width: 680px;
+  margin: 0 auto;
+  line-height: 1.85;
+}
+.section-next {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  font-size: 0.8125rem;
+}
+.opening-paper {
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(700px, 90svh);
+  z-index: 5;
+  pointer-events: none;
+  perspective: 1200px;
+  overflow: hidden;
+}
+.opening-paper > div {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--gold);
+  background: var(--paper);
+  transform-origin: top;
+  animation: letter-unfold var(--motion-cinematic) var(--ease-out) both;
+}
+.opening-paper > div + div {
+  transform-origin: bottom;
+  animation-name: letter-release;
+}
+@keyframes letter-unfold {
+  0% {
+    transform: rotateX(0);
+    opacity: 1;
+  }
+  60%,
+  100% {
+    transform: rotateX(110deg) translateY(-8%);
+    opacity: 0;
+  }
+}
+@keyframes letter-release {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(85%) rotateX(-15deg);
+    opacity: 0;
+  }
+}
+.invitation-reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gold);
+  transform-origin: left;
+  transform: scaleX(0);
+  z-index: 25;
+  pointer-events: none;
+}
+html:has(.invitation.opened) {
+  scroll-snap-type: none;
+  scroll-behavior: smooth;
+}
+.invitation .meeting-schedule {
+  background: var(--paper);
+  padding-block: clamp(3rem, 6vw, 5rem);
+}
+.meeting-schedule > .section-label {
+  font-size: 0.8125rem;
+  text-transform: none;
+  margin-top: 0;
+}
+.meeting-schedule > h2 {
+  font-size: var(--text-section);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  margin: 0.75rem 0 1rem;
+}
+.invitation .meeting-rule {
+  height: 1px;
+  width: 64px;
+  margin: 0.5rem auto 2.5rem;
+  background: var(--gold);
+}
+.invitation .meeting-redesign {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 2rem;
+  align-items: start;
+  text-align: left;
+}
+.invitation .calendar-card,
+.invitation .venue-card {
+  border: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--surface);
+  min-width: 0;
+  overflow: hidden;
+}
+.invitation .calendar-card header {
+  position: relative;
+  background: var(--brand);
+  padding: 1.5rem;
+  color: var(--paper);
+}
+.calendar-card header::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 1.5rem;
+  width: 16px;
+  height: 32px;
+  background: var(--gold);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+}
+.calendar-card header span {
+  font-size: 0.8125rem;
+}
+.calendar-card header h3 {
+  font-size: 1.5rem;
+  color: var(--paper);
+}
+.calendar-card header p {
+  font-size: 0.8125rem;
+  color: var(--sage);
+  margin-bottom: 0;
+}
+.calendar-months {
+  padding: 1rem;
+}
+.calendar-months h4 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-block: 0.5rem 1rem;
+}
+.calendar-grid {
+  gap: 0.2rem;
+  font-size: 0.8125rem;
+}
+.calendar-grid span,
+.calendar-grid b {
+  padding: 0.5rem 0;
+  border-radius: 3px;
+}
+.calendar-grid b {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.invitation .calendar-start,
+.invitation .calendar-end {
+  background: var(--brand);
+  color: var(--paper);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.invitation .calendar-between {
+  background: var(--selected);
+  border-bottom: 2px solid var(--sage);
+}
+.invitation .calendar-card footer {
+  display: block;
+  padding: 1rem;
+  margin: 0;
+  width: auto;
+  max-width: none;
+  font-size: 0.8125rem;
+  border-top: 1px solid var(--border);
+}
+.calendar-card footer .event-title {
+  display: block;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+.venue-tabs {
+  background: var(--surface-muted);
+}
+.venue-tabs button {
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  padding: 0.875rem 0.75rem;
+  min-height: 56px;
+}
+.invitation .venue-tabs button[aria-pressed="true"] {
+  color: var(--brand);
+  background: var(--surface);
+  box-shadow: inset 0 -2px var(--brand);
+}
+.venue-media {
+  aspect-ratio: 1.65;
+  background: var(--surface-muted);
+}
+.venue-media img {
+  margin: 0;
+  transition: transform var(--motion-emphasis);
+}
+.venue-media:hover img {
+  transform: scale(1.025);
+}
+.venue-media strong {
+  background: linear-gradient(transparent, var(--scrim));
+  font-size: 0.875rem;
+}
+.venue-map {
+  min-height: 180px;
+  padding: 1.5rem;
+  background: var(--surface-muted);
+  color: var(--brand);
+}
+.venue-map p {
+  font-size: 0.875rem;
+  margin: 0.75rem 0 0.5rem;
+}
+.venue-map a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+}
+.venue-detail {
+  padding: 1.5rem;
+}
+.venue-detail h3 {
+  font-size: 1.25rem;
+  margin-top: 0;
+}
+.venue-detail p {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.venue-detail > [role="status"]:empty {
+  display: none;
+}
+.venue-actions {
+  align-items: stretch;
+  margin-top: 1.5rem;
+}
+.venue-actions button,
+.venue-actions a {
+  font-size: 0.75rem;
+  min-height: 44px;
+}
+.invitation .venue-actions a {
+  background: var(--brand);
+  border-radius: var(--radius-control);
+}
+.invitation-quote-one {
+  position: relative;
+  padding: clamp(3rem, 7vw, 6rem) clamp(1.5rem, 5vw, 4rem);
+  background: var(--brand);
+  color: var(--paper);
+}
+.quote-mark {
+  display: block;
+  color: var(--gold);
+  font-size: 5rem;
+  line-height: 0.65;
+}
+.invitation-quote-one blockquote {
+  max-width: 780px;
+  margin: 2rem auto;
+  font-size: clamp(1.3rem, 3vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.6;
+}
+.invitation-quote-one p {
+  font-size: 0.8125rem;
+  color: var(--sage);
+}
+.invitation .invitation-program {
+  padding-block: clamp(3rem, 7vw, 6rem);
+  background: var(--surface);
+}
+.agenda h2 {
+  font-size: var(--text-section);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+.agenda ol {
+  position: relative;
+  margin-top: 2.5rem;
+  padding: 0;
+  list-style: none;
+}
+.agenda ol::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 20px;
+  bottom: 20px;
+  width: 1px;
+  background: var(--border);
+}
+.agenda li,
+.invitation-program .agenda li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(100px, 145px) minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 0.9375rem;
+  font-weight: 400;
+}
+.agenda-marker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--brand);
+  z-index: 1;
+}
+.agenda li time {
+  padding-top: 0.65rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.agenda li > div {
+  padding-top: 0.55rem;
+  line-height: 1.75;
+}
+.agenda li.agenda-highlight {
+  background: transparent;
+}
+.agenda-highlight .agenda-marker {
+  background: var(--brand);
+  color: var(--paper);
+  border-color: var(--brand);
+}
+.agenda-highlight > div {
+  font-weight: 500;
+}
+.agenda-highlight > div > strong {
+  display: block;
+  color: var(--gold-dark);
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+.invitation-quote-two {
+  padding: clamp(2rem, 6vw, 5rem);
+  background: var(--paper);
+  color: var(--ink);
+  border-top: 1px solid var(--border);
+}
+.invitation-closing {
+  padding: clamp(3rem, 6vw, 5rem) 1.5rem;
+  background: var(--paper);
+  border-top: 1px solid var(--border);
+}
+.closing-mark {
+  width: fit-content;
+  margin-inline: auto;
+}
+.closing-mark .bookclub-logo {
+  width: 80px;
+}
+.invitation-signoff {
+  max-width: 500px;
+  margin: 1.5rem auto;
+  font-size: var(--text-lead);
+  font-style: normal;
+  padding: 0;
+  line-height: 1.65;
+}
+.invitation-closing strong {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.invitation-closing .text-link {
+  display: inline-flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .invitation-reading-progress {
+      animation: reading-progress linear;
+      animation-timeline: scroll(root);
+    }
+    @keyframes reading-progress {
+      to {
+        transform: scaleX(1);
+      }
+    }
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .invitation-greeting
+    > :is(h1, .greeting-salutation, .guest-description) {
+    animation: greeting-enter var(--motion-cinematic) var(--ease-out) both;
+  }
+  .invitation-greeting > h1 {
+    animation-delay: 100ms;
+  }
+  .invitation-greeting > .guest-description {
+    animation-delay: 180ms;
+  }
+  @keyframes greeting-enter {
+    from {
+      opacity: 0.35;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+@media (max-width: 800px) {
+  .invitation .meeting-redesign {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    max-width: 540px;
+    margin-inline: auto;
+  }
+  .invitation {
+    margin-block: 2rem;
+  }
+  .invitation-cover {
+    padding-inline: 1rem;
+  }
+  .invitation-greeting {
+    min-height: 0;
+  }
+}
+@media (max-width: 540px) {
+  .invitation {
+    margin-block: 1.5rem;
+  }
+  .invitation-cover {
+    padding: 0 0.25rem 1rem;
+  }
+  .cover-topline {
+    font-size: 0.7rem;
+  }
+  .envelope-flap {
+    inset-inline: 0;
+    transform: rotate(-1deg);
+  }
+  .envelope-paper {
+    padding: 2rem 1.25rem;
+  }
+  .envelope-paper::before {
+    inset: 8px;
+  }
+  .envelope-paper::after {
+    inset: 14px;
+  }
+  .invitation-cover .guest-description {
+    font-size: 0.875rem;
+  }
+  .invitation-logos {
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .invitation-logos img {
+    width: 42px;
+    height: 42px;
+  }
+  .cover-recipient strong {
+    font-size: clamp(1.75rem, 7.5vw, 2.5rem);
+  }
+  .cover-postscript {
+    font-size: 0.65rem;
+    padding-inline: 0.25rem;
+  }
+  .invitation-section {
+    padding-inline: 1.25rem;
+  }
+  .invitation-greeting {
+    padding-block: 2.5rem;
+  }
+  .invitation-greeting h1 {
+    font-size: 2rem;
+  }
+  .invitation-event .prose,
+  .greeting-message {
+    font-size: 0.9375rem;
+  }
+  .invitation-greeting .guest-description {
+    font-size: 0.875rem;
+  }
+  .section-next {
+    font-size: 0.75rem;
+    gap: 0.4rem;
+  }
+  .meeting-schedule > h2 {
+    font-size: 1.8rem;
+  }
+  .invitation .meeting-schedule {
+    padding-inline: 1rem;
+  }
+  .venue-detail {
+    padding: 1rem;
+  }
+  .venue-actions {
+    flex-direction: column;
+  }
+  .venue-actions > * {
+    width: 100%;
+  }
+  .venue-tabs button {
+    font-size: 0.6875rem;
+    gap: 0.25rem;
+    padding-inline: 0.35rem;
+  }
+  .venue-tabs svg {
+    flex-shrink: 0;
+    width: 16px;
+  }
+  .agenda li,
+  .invitation-program .agenda li {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 0 1rem;
+  }
+  .agenda li > div,
+  .invitation-program .agenda li > div {
+    grid-column: 2;
+  }
+  .agenda li time {
+    font-weight: 500;
+  }
+  .agenda-marker {
+    grid-row: span 2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.invitation.opened) {
+    scroll-behavior: auto;
+  }
+  .opening-paper {
+    display: none;
+  }
+  .invitation-reading-progress {
+    display: none;
+  }
+  .venue-media:hover img {
+    transform: none;
+  }
+}
