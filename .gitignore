@@ -18,10 +18,13 @@ dist
 dist-e2e
 dist-ssr
 *.local
+.local/
 .local/production-snapshots/
 .local/production-backups/
 .local/postgresql-tools/
 .local/postgresql-restore/
+.local/design-references/
+.local/ui-redesign/
 
 # Editor directories and files
 .vscode/*
