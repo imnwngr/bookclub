@@ -7,13 +7,18 @@ export function InvitationLogos() {
         ["ctut", "Logo Trường Đại học Kỹ thuật – Công nghệ Cần Thơ"],
         ["bookclub", "Logo BookClub CTUT"],
       ].map(([key, alt]) => (
-        <img
-          key={key}
-          src={`${import.meta.env.BASE_URL}logos/logo-${key}.png`}
-          alt={alt}
-          width={90}
-          height={90}
-        />
+        <picture key={key}>
+          <source
+            type="image/webp"
+            srcSet={`${import.meta.env.BASE_URL}logos/logo-${key}-192.webp`}
+          />
+          <img
+            src={`${import.meta.env.BASE_URL}logos/logo-${key}.png`}
+            alt={alt}
+            width={90}
+            height={90}
+          />
+        </picture>
       ))}
     </div>
   );
