@@ -1,10 +1,22 @@
-import { Shield, CalendarDays, Users, LogOut } from "lucide-react";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  lazy,
+  Suspense,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { Session } from "@supabase/supabase-js";
-import { Navigate, Outlet, NavLink, useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { db, supabase } from "../../lib/supabase";
 import { ErrorState, Loading } from "../../components/Feedback";
+const AdminShell = lazy(() =>
+  import("../../components/AdminShell").then((module) => ({
+    default: module.AdminShell,
+  })),
+);
 const AuthContext = createContext<{
   session: Session | null;
   pending: boolean;
@@ -71,5 +83,9 @@ export function AdminGuard() {
         <button onClick={() => void db().auth.signOut()}>Đăng xuất</button>
       </div>
     );
-  return <><nav className="admin-navigation" aria-label="Quản trị"><NavLink to="/admin/" end><CalendarDays size={18}/> Sự kiện</NavLink><NavLink to="/admin/guests"><Users size={18}/> Danh bạ khách mời</NavLink><NavLink to="/admin/roles"><Shield size={18}/> Quản lý vai trò</NavLink><button onClick={async()=>{const r=await db().auth.signOut();if(r.error)window.alert(r.error.message)}}><LogOut size={18}/> Đăng xuất</button></nav><Outlet /></>;
+  return (
+    <Suspense fallback={<Loading />}>
+      <AdminShell />
+    </Suspense>
+  );
 }

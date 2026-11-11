@@ -14,7 +14,10 @@ import { Empty, ErrorState, Loading } from "../components/Feedback";
 import { EventFilters } from "../components/EventFilters";
 import { Confirm } from "../components/Confirm";
 import type { ClubEvent } from "../types/domain";
+import { Plus, ArrowUpRight, CalendarDays } from "lucide-react";
+import { useClock } from "../hooks/useClock";
 export default function Dashboard() {
+  const now = useClock();
   const query = useQuery({
     queryKey: ["events", "admin"],
     queryFn: () => listEvents(true),
@@ -34,15 +37,42 @@ export default function Dashboard() {
     <section className="admin">
       <div className="section-head">
         <div>
-          <p className="section-label">Không gian quản trị</p>
+          <p className="section-label">Lịch hoạt động của câu lạc bộ</p>
           <h1>Quản lý sự kiện</h1>
         </div>
         <div className="actions">
           <Link className="button" to="/admin/new">
-            Thêm sự kiện
+            <Plus size={18} aria-hidden="true" /> Thêm sự kiện
           </Link>
         </div>
       </div>
+      {query.data && !query.error && (
+        <dl className="dashboard-overview">
+          <div>
+            <dt>Tổng sự kiện</dt>
+            <dd>{events.length}</dd>
+          </div>
+          <div>
+            <dt>Đã công bố</dt>
+            <dd>{events.filter((e) => e.status === "published").length}</dd>
+          </div>
+          <div>
+            <dt>Bản nháp</dt>
+            <dd>{events.filter((e) => e.status === "draft").length}</dd>
+          </div>
+          <div>
+            <dt>Sắp diễn ra</dt>
+            <dd>
+              {
+                events.filter(
+                  (e) =>
+                    e.status === "published" && Date.parse(e.starts_at) > now,
+                ).length
+              }
+            </dd>
+          </div>
+        </dl>
+      )}
       <div className="toolbar">
         <label>
           Tìm sự kiện
@@ -71,6 +101,11 @@ export default function Dashboard() {
           </select>
         </label>
       </div>
+      {!query.isPending && !query.error && (
+        <p className="result-count" role="status">
+          {filtered.length} sự kiện trong danh sách
+        </p>
+      )}
       {query.isPending ? (
         <Loading />
       ) : query.error ? (
@@ -80,20 +115,25 @@ export default function Dashboard() {
       ) : (
         <div className="admin-list">
           {filtered.map((event) => (
-            <article className="panel" key={event.id}>
-              <span className="status">
-                {event.status === "published" ? "Đã công bố" : "Bản nháp"}
-              </span>
+            <article className="panel admin-event" key={event.id}>
+              <div className="admin-event-heading">
+                <span className={`status ${event.status}`}>
+                  {event.status === "published" ? "Đã công bố" : "Bản nháp"}
+                </span>
+                <span className="event-code">{event.code}</span>
+              </div>
               <h2 className="event-title">{event.title}</h2>
               <p>
-                {event.code} · {formatDate(event.starts_at)}
+                <CalendarDays size={16} aria-hidden="true" />
+                {formatDate(event.starts_at)}
               </p>
               <div className="actions">
                 <Link
                   className="button secondary"
                   to={`/admin/edit/${event.code}`}
                 >
-                  Chỉnh sửa & thiệp mời
+                  Chỉnh sửa & thiệp mời{" "}
+                  <ArrowUpRight size={16} aria-hidden="true" />
                 </Link>
                 <button
                   className="secondary"
@@ -138,8 +178,8 @@ export default function Dashboard() {
             }
           }}
         >
-          Sự kiện “<span className="event-title">{deleting.title}</span>” và thiệp liên quan sẽ bị xóa. Danh bạ khách
-          mời được giữ lại.
+          Sự kiện “<span className="event-title">{deleting.title}</span>” và
+          thiệp liên quan sẽ bị xóa. Danh bạ khách mời được giữ lại.
         </Confirm>
       )}
     </section>
