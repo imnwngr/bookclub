@@ -30,10 +30,21 @@ export function VenueImage({ path }: { path?: string | null }) {
     };
   }, [path]);
   if (!path) return null;
-  if (error) return <p role="status">Ảnh địa điểm hiện không tải được.</p>;
-  if (!url) return <p role="status">Đang tải ảnh địa điểm…</p>;
+  if (error)
+    return (
+      <div className="venue-image-frame">
+        <p role="status">Ảnh địa điểm hiện không tải được.</p>
+      </div>
+    );
+  if (!url)
+    return (
+      <div className="venue-image-frame">
+        <p role="status">Đang tải ảnh địa điểm…</p>
+      </div>
+    );
   return (
     <a
+      className="venue-image-frame"
       href={url}
       target="_blank"
       rel="noopener noreferrer"
@@ -41,6 +52,10 @@ export function VenueImage({ path }: { path?: string | null }) {
     >
       <img
         className="venue-image"
+        width={960}
+        height={600}
+        loading="lazy"
+        decoding="async"
         src={url}
         alt="Hình ảnh địa điểm buổi gặp mặt"
       />

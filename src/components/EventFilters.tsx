@@ -41,6 +41,18 @@ export function EventFilters({
           ))}
         </select>
       </label>
+      {(month || year) && (
+        <button
+          type="button"
+          className="secondary filter-reset"
+          onClick={() => {
+            setMonth("");
+            setYear("");
+          }}
+        >
+          Xóa bộ lọc
+        </button>
+      )}
     </div>
   );
 }

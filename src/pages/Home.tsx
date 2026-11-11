@@ -13,6 +13,9 @@ import {
 import { useClock } from "../hooks/useClock";
 import { Empty, ErrorState, Loading } from "../components/Feedback";
 import { EventFilters } from "../components/EventFilters";
+import { ArrowDown, ArrowUpRight } from "lucide-react";
+import { PaperArt } from "../components/PaperArt";
+import { Reveal } from "../components/Reveal";
 export default function Home() {
   const query = useQuery({
     queryKey: ["events", "public"],
@@ -22,32 +25,47 @@ export default function Home() {
   const [year, setYear] = useState("");
   const [limit, setLimit] = useState(10);
   const now = useClock();
-  const events = query.data ?? [];
+  const events = (query.data ?? []).filter(
+    (event) => event.status === "published",
+  );
   const filtered = orderEvents(filterEvents(events, month, year), now);
   const years = [...new Set(events.map((e) => eventYear(e.starts_at)))]
     .sort()
     .reverse();
   return (
     <>
-      <section className="intro">
-        <p className="section-label">
-          Câu lạc bộ Sinh viên Yêu thích Sách · CTUT
-        </p>
-        <h1>
-          Hẹn nhau
-          <br />
-          <em>giữa những trang sách.</em>
-        </h1>
-        <p>
-          Lịch sự kiện, những cuộc gặp gỡ và hoạt động của BookClub tại Trường
-          Đại học Kỹ thuật – Công nghệ Cần Thơ.
-        </p>
+      <section className="editorial-hero">
+        <div className="hero-copy">
+          <p className="section-label">Câu lạc bộ Sinh viên Yêu thích Sách</p>
+          <h1>
+            Hẹn nhau
+            <br />
+            <span>giữa những</span>
+            <br />
+            trang sách.
+          </h1>
+          <p className="hero-description">
+            Những cuộc gặp gỡ, câu chuyện và hoạt động của BookClub tại CTUT.
+          </p>
+          <a className="button hero-cta" href="#events-title">
+            Xem lịch sự kiện <ArrowDown size={18} aria-hidden="true" />
+          </a>
+        </div>
+        <PaperArt />
+        <div className="hero-colophon">
+          <span>Đọc sách. Gặp gỡ. Sẻ chia.</span>
+          <a href="#events-title" aria-label="Cuộn đến danh sách sự kiện">
+            <ArrowDown size={18} />
+          </a>
+        </div>
       </section>
       <section className="listing" aria-labelledby="events-title">
         <div className="section-head">
           <div>
-            <p className="section-label">Cùng BookClub</p>
-            <h2 id="events-title">Sự kiện & gặp gỡ</h2>
+            <p className="section-label">Lịch hẹn BookClub</p>
+            <h2 id="events-title" tabIndex={-1}>
+              Sự kiện & gặp gỡ
+            </h2>
           </div>
           <EventFilters
             month={month}
@@ -63,6 +81,12 @@ export default function Home() {
             years={years}
           />
         </div>
+        {!query.isPending && !query.error && (
+          <p className="result-count" role="status">
+            {filtered.length} sự kiện
+            {month || year ? " phù hợp với bộ lọc" : " được công bố"}
+          </p>
+        )}
         {query.isPending ? (
           <Loading />
         ) : query.error ? (
@@ -74,7 +98,7 @@ export default function Home() {
           </Empty>
         ) : (
           <>
-            <div className="event-list">
+            <Reveal className="event-list" key={`${month}-${year}`}>
               {filtered.slice(0, limit).map((e, i) => (
                 <article
                   key={e.id}
@@ -111,10 +135,11 @@ export default function Home() {
                   </div>
                   <Link className="text-link" to={`/${e.code}`}>
                     Xem chi tiết<span className="sr-only"> {e.title}</span>
+                    <ArrowUpRight size={20} aria-hidden="true" />
                   </Link>
                 </article>
               ))}
-            </div>
+            </Reveal>
             {filtered.length > limit && (
               <button
                 className="secondary load-more"
