@@ -1,8 +1,10 @@
-# BookClub Event Manager CTUT — v1.1.0
+# BookClub CTUT v2.0.0
 
-Ứng dụng quản lý sự kiện và thiệp mời của CLB Sinh viên Yêu thích Sách CTUT. Frontend v1.1 đang chuẩn bị phát hành; GitHub Pages hiện vẫn phục vụ v1.0. Database Supabase production đã clean rebuild v1.1 và refinement đã được áp dụng, hậu kiểm đạt. Xem [VERIFICATION.md](VERIFICATION.md) và [UPGRADE-v1.1.md](UPGRADE-v1.1.md) để đối chiếu bằng chứng; các đoạn báo cáo cũ là lịch sử theo thời điểm.
+Ứng dụng quản lý sự kiện và thiệp mời của CLB Sinh viên Yêu thích Sách CTUT. Phiên bản frontend 2.0.0 gồm giao diện editorial, thiệp mời cá nhân hóa, chất liệu emerald/giấy và điều khiển nhạc Liquid Glass. Bản nâng cấp này giữ các tích hợp dữ liệu hiện có, không yêu cầu thay đổi database. Xem [VERIFICATION.md](VERIFICATION.md) để đối chiếu kiểm thử; hồ sơ [UPGRADE-v1.1.md](UPGRADE-v1.1.md) và các báo cáo cũ là lịch sử theo thời điểm.
 
 ## Chạy local
+
+Redesign frontend ngày 11/11/2026: xem [DESIGN.md](DESIGN.md), [UI-REDESIGN-PLAN.md](UI-REDESIGN-PLAN.md), [UI-REDESIGN-VERIFICATION.md](UI-REDESIGN-VERIFICATION.md) và [INVITATION-SCROLL-FIX-VERIFICATION.md](INVITATION-SCROLL-FIX-VERIFICATION.md) để đối chiếu source, kiểm thử và giới hạn performance. Screenshots/video kiểm thử nằm trong `.local/` và không được commit. Các báo cáo nghiệm thu local và báo cáo live lịch sử không chứng nhận deployment production mới.
 
 Cần Node.js 24 và npm; dùng lockfile: `npm ci`. Tạo `.env.local` từ `.env.example`, cấu hình `VITE_SUPABASE_URL` và `VITE_SUPABASE_PUBLISHABLE_KEY` của project được phép dùng. Các biến Vite là công khai trên frontend; không đặt service_role, mật khẩu hoặc token riêng. Chạy `npm run dev`, mở `/bookclub/`. Không commit `.env.local`.
 

@@ -639,3 +639,36 @@ Tests: shared positive/negative corpus across frontend and PGlite, actual Tiptap
 
 ## Authorized production migration and local commit — execution status
 User approved quote migration and local commit. User-reported preflight: baseline_matches true; save_event MD5 91ca923e964e16cb3e4eca606b7a1e6b; events RLS enabled; quote columns absent; validator name available; event count 1; event fingerprint 653f543e10c666ad924292076c80a957. No SQL connector, browser host or native pipe available: migration BLOCKED/PENDING, production postflight NOT RUN; no post-migration fingerprint exists. Exact approved file: supabase/migrations/202611070001_invitation_quotes.sql, then supabase/quote-postflight.sql. Do not rerun after successful COMMIT. Existing local PGlite 11/11, typecheck/lint/build evidence remains applicable; no production schema/data changes made. Push and deploy are not authorized.
+
+
+## Admin/Editor implementation — local only
+Added editor membership, content permission helper, read-only role directory, service-only role writes and Edge invitation flow. PGlite 1 integration test and Edge 6 mocked tests PASS. UI/Auth focused Playwright 10/10 PASS after updating login fixtures to can_edit_content; prior run exposed 2 stale mock failures, now resolved. Content/guest focused run 8 passed, with only login mocks failing before fix. Typecheck/lint/build PASS. Deno-native/live deployment, real multi-connection role race and real invitations NOT RUN. No production schema/users/data changed. See EDITOR-ROLES-REVIEW.md; production NO-GO until audit/deployment validation.
+
+
+## Follow-up authorization verification
+Edge mock tests now 9/9 PASS (including banned/anonymous targets, Auth invite error, transport failure after invitation). PGlite integration 1/1 PASS additionally confirms Editor event update and quote preservation, Admin effective-role precedence on overlapping fixture membership and continued Admin event CRUD. Playwright revoke confirm/error/refresh 2/2 PASS on desktop/mobile, alongside previous 10/10 Auth/Role regression. Typecheck/lint PASS. No native Deno runtime, actual multi-connection grant/revoke or production deployment test has run. No production calls, invitation emails, commit, push or deploy.
+
+
+## Role transaction hardening
+set_editor_role now holds a SHARE lock on admin_users for the transaction, preventing concurrent privileged membership edits from crossing the actor/target check during a feature role write. Existing advisory lock still serializes feature grant/revoke. No Admin rows are modified. PGlite confirms duplicate grant refusal and explicit transaction rollback restores Editor membership after a failed revoke transaction. This is sequential transaction evidence, not real multi-connection proof. Audit SQL now reports effective write-RPC and client membership table privileges explicitly.
+
+
+Role directory loading/empty/permission-error Playwright mock 2/2 PASS (desktop/mobile). Test initially used a stale loading label; corrected to actual Loading component text, no UI relaxation. To continue production safety reconciliation, run supabase/editor-roles-preflight.sql read-only in the named project and supply its JSON. Do not apply migration or deploy function yet. Native Deno and real concurrent grant/revoke still NOT RUN.
+
+## Frontend 2.0.0: pre-push verification, 2026-11-11
+
+This section records the current frontend release; database and deployment reports above remain historical. Version `2.0.0` is synchronized in `package.json`, the lockfile root and its root-package entry. The Git changes contain no Supabase schema, migration, RPC, RLS or workflow changes.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck` | PASS |
+| `npm run lint` | PASS |
+| `npm test -- --maxWorkers=2` | PASS: 120 tests in 25 files |
+| `npm run test:e2e -- --workers=4` | PASS: 145 tests, 25 intentional skips, 3.1 minutes |
+| `npm run build` with package version 2.0.0 | PASS |
+| `git diff --cached --check` | PASS after trimming one trailing space in the font license; license wording unchanged |
+| Staged files and secret scan | 92 files inspected; no local environment values or common credential patterns found |
+
+The skipped tests are duplicate mobile width matrices; the width matrices run in the desktop project and interaction tests also run in mobile. E2E uses an isolated mock backend. Logs and generated screenshots stay in ignored `.local/`, `playwright-report/` and `test-results/`; no `.env`, dependency directory, database backup or test output is included. Unrelated local database-operation documents/scripts and live production QA helpers remain outside this release.
+
+The reviewed changes are split into 21 topical commits, with `v2.0.0` intended to identify their final snapshot. Push authorization does not mean local verification proves a successful production rollout. The existing workflow deploys GitHub Pages after a successful push-triggered verification on `main`; no separate deploy command is part of this task. The measured LCP limitation and device/browser coverage remain documented in `INVITATION-SCROLL-FIX-VERIFICATION.md`.
