@@ -1,9 +1,13 @@
-import { Outlet, Link, createBrowserRouter } from "react-router-dom";
+import { Link, createBrowserRouter } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import Home from "./pages/Home";
-import EventDetail from "./pages/EventDetail";
+const Home = lazy(() => import("./pages/Home"));
 import InvitationPage from "./pages/InvitationPage";
-import Login from "./pages/Login";
+import { client } from "./lib/queryClient";
+import { getEvent, resolveInvitation } from "./features/events/api";
+const loadEventDetail = () => import("./pages/EventDetail");
+const EventDetail = lazy(loadEventDetail);
+const Login = lazy(() => import("./pages/Login"));
+import { SiteLayout } from "./components/SiteLayout";
 import { Loading } from "./components/Feedback";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const EventForm = lazy(() => import("./pages/EventForm"));
@@ -12,40 +16,13 @@ const RoleDirectory = lazy(() => import("./pages/RoleDirectory"));
 const GuestDirectory = lazy(() => import("./pages/GuestDirectory"));
 import { AdminGuard } from "./features/admin/Auth";
 function Layout() {
-  return (
-    <>
-      <a className="skip-link" href="#main">
-        Đến nội dung chính
-      </a>
-      <header className="site-header">
-        <Link className="wordmark" to="/">
-          BookClub<span>CTUT · Cần Thơ</span>
-        </Link>
-        <nav aria-label="Điều hướng chính">
-          <Link to="/">Sự kiện</Link>
-          <Link className="admin-link" to="/admin/">
-            Quản lý sự kiện
-          </Link>
-        </nav>
-      </header>
-      <main id="main">
-        <Outlet />
-      </main>
-      <footer>
-        <strong>BookClub CTUT</strong>
-        <p>
-          Câu lạc bộ Sinh viên Yêu thích Sách
-          <br />
-          Trường Đại học Kỹ thuật – Công nghệ Cần Thơ
-        </p>
-      </footer>
-    </>
-  );
+  return <SiteLayout />;
 }
 export const router = createBrowserRouter(
   [
     {
       element: <Layout />,
+      HydrateFallback: Loading,
       errorElement: (
         <div className="state">
           <h1>Không thể mở trang</h1>
@@ -55,7 +32,14 @@ export const router = createBrowserRouter(
       children: [
         { index: true, element: <Home /> },
         { path: "admin/login", element: <Login /> },
-        { path: "auth/accept", element: <Suspense fallback={<Loading />}><AcceptInvitation /></Suspense> },
+        {
+          path: "auth/accept",
+          element: (
+            <Suspense fallback={<Loading />}>
+              <AcceptInvitation />
+            </Suspense>
+          ),
+        },
         {
           element: <AdminGuard />,
           children: [
@@ -83,7 +67,14 @@ export const router = createBrowserRouter(
                 </Suspense>
               ),
             },
-            { path: "admin/roles", element: <Suspense fallback={<Loading />}><RoleDirectory /></Suspense> },
+            {
+              path: "admin/roles",
+              element: (
+                <Suspense fallback={<Loading />}>
+                  <RoleDirectory />
+                </Suspense>
+              ),
+            },
             {
               path: "admin/guests",
               element: (
@@ -94,8 +85,32 @@ export const router = createBrowserRouter(
             },
           ],
         },
-        { path: ":eventCode/:guestAlias", element: <InvitationPage /> },
-        { path: ":eventCode", element: <EventDetail /> },
+        {
+          path: ":eventCode/:guestAlias",
+          Component: InvitationPage,
+          loader: ({ params }) => {
+            const { eventCode = "", guestAlias = "" } = params;
+            // Keep data retries and errors in the existing query cache.
+            void client.prefetchQuery({
+              queryKey: ["invitation", eventCode, guestAlias],
+              queryFn: () => resolveInvitation(eventCode, guestAlias),
+            });
+            return null;
+          },
+        },
+        {
+          path: ":eventCode",
+          element: <EventDetail />,
+          loader: ({ params }) => {
+            const { eventCode = "" } = params;
+            void loadEventDetail().catch(() => {});
+            void client.prefetchQuery({
+              queryKey: ["event", eventCode],
+              queryFn: () => getEvent(eventCode),
+            });
+            return null;
+          },
+        },
         {
           path: "*",
           element: (
