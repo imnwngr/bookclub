@@ -8,7 +8,7 @@ import {
 } from "../src/components/GuestDescription";
 import { AgendaEditor } from "../src/components/AgendaEditor";
 import { Agenda } from "../src/components/Agenda";
-import { eventSchema } from "../src/lib/domain";
+import { eventSchema } from "../src/lib/validation";
 import type { AgendaItem } from "../src/types/domain";
 it("splits commas and existing newlines without changing the source text", () => {
   const value = "  Vai trò  một, Vai trò hai,\n\n Vai trò ba.  ";

@@ -1,8 +1,7 @@
+import { codeSchema, eventSchema } from "../src/lib/validation";
 import { describe, expect, it } from "vitest";
 import {
   availableAlias,
-  codeSchema,
-  eventSchema,
   eventStatus,
   filterEvents,
   fromLocalInput,

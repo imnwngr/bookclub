@@ -15,7 +15,8 @@ import {
   listInvitations,
   saveEvent,
 } from "../features/events/api";
-import { eventSchema, codeSchema, mapLink, slug } from "../lib/domain";
+import { mapLink, slug } from "../lib/domain";
+import { eventSchema, codeSchema } from "../lib/validation";
 import { errorMessage } from "../lib/supabase";
 import type { ClubEvent, EventInput, Guest, Invitation } from "../types/domain";
 import { Empty, ErrorState, Loading } from "../components/Feedback";
@@ -114,13 +115,14 @@ function EventEditor({
     formState: { errors, isDirty },
   } = form;
   const [selected, setSelected] = useState(invitations.map((i) => i.guest_id));
-  const [musicFile,setMusicFile]=useState<File|null>(null);
+  const [musicFile, setMusicFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const selectionDirty =
     JSON.stringify([...selected].sort()) !==
     JSON.stringify(invitations.map((i) => i.guest_id).sort());
-  const dirty = isDirty || selectionDirty || imageFile !== null || musicFile !== null;
+  const dirty =
+    isDirty || selectionDirty || imageFile !== null || musicFile !== null;
   const blocker = useBlocker(dirty && !saving);
   useEffect(() => {
     const guard = (e: BeforeUnloadEvent) => {
@@ -155,6 +157,26 @@ function EventEditor({
     <section className="editor" inert={saving}>
       <Link to="/admin/">Về danh sách quản trị</Link>
       <h1>{event ? "Chỉnh sửa sự kiện" : "Thêm sự kiện"}</h1>
+      <p className="editor-intro">
+        Chuẩn bị nội dung, chương trình và danh sách khách mời. Mọi thay đổi chỉ
+        được áp dụng khi lưu.
+      </p>
+      <nav className="editor-nav" aria-label="Các phần của sự kiện">
+        {[
+          ["basics", "Thông tin"],
+          ["time", "Thời gian"],
+          ["content", "Nội dung & nhạc"],
+          ["venue", "Địa điểm & ảnh"],
+          ["agenda", "Chương trình"],
+          ["guests", "Khách mời"],
+          ["publish", "Công bố & thiệp"],
+        ].map(([id, label], index) => (
+          <a key={id} href={`#editor-${id}`}>
+            <span aria-hidden="true">0{index + 1}</span>
+            {label}
+          </a>
+        ))}
+      </nav>
       <form
         noValidate
         onSubmitCapture={(e) => {
@@ -182,18 +204,29 @@ function EventEditor({
           }
           setSaving(true);
           let uploaded: string | null = null;
-          let musicUploaded:string|null=null;
-          let savedSuccessfully=false;
+          let musicUploaded: string | null = null;
+          let savedSuccessfully = false;
           try {
             if (imageFile) {
               uploaded = await uploadVenueImage(imageFile);
               values.venue_image_path = uploaded;
             }
-            if(musicFile){musicUploaded=await uploadMusic(musicFile);values.music_path=musicUploaded;}
+            if (musicFile) {
+              musicUploaded = await uploadMusic(musicFile);
+              values.music_path = musicUploaded;
+            }
             const saved = await saveEvent(values, selected, event);
-            savedSuccessfully=true;
+            savedSuccessfully = true;
             setMusicFile(null);
-            if(event?.music_path && event.music_path!==saved.music_path){try{await discardMusic(event.music_path)}catch{toast.error("Đã lưu; nhạc cũ còn trong danh sách dọn nhạc tạm.")}}
+            if (event?.music_path && event.music_path !== saved.music_path) {
+              try {
+                await discardMusic(event.music_path);
+              } catch {
+                toast.error(
+                  "Đã lưu; nhạc cũ còn trong danh sách dọn nhạc tạm.",
+                );
+              }
+            }
             setImageFile(null);
             if (
               event?.venue_image_path &&
@@ -211,7 +244,13 @@ function EventEditor({
             toast.success("Đã lưu sự kiện");
             navigate(`/admin/edit/${saved.code}`, { replace: true });
           } catch (error) {
-            if(musicUploaded&&!savedSuccessfully){try{await discardMusic(musicUploaded)}catch{toast.error("Nhạc upload còn trong danh sách dọn nhạc tạm.")}}
+            if (musicUploaded && !savedSuccessfully) {
+              try {
+                await discardMusic(musicUploaded);
+              } catch {
+                toast.error("Nhạc upload còn trong danh sách dọn nhạc tạm.");
+              }
+            }
             if (uploaded) {
               try {
                 await discardVenueImage(uploaded);
@@ -227,31 +266,29 @@ function EventEditor({
           }
         })}
       >
-        <Switch
-          checked={watch("status") === "published"}
-          label={
-            watch("status") === "published"
-              ? "Đã công khai (lưu để áp dụng)"
-              : "Bản nháp / Không công khai"
-          }
-          onChange={(v) => change("status", v ? "published" : "draft")}
-        />
-        <fieldset>
+        <fieldset id="editor-basics">
           <legend>Thông tin sự kiện</legend>
-          <label>Tên sự kiện *<AutoGrowingTextarea {...register("title")} value={watch("title")} aria-label="Tên sự kiện *" aria-invalid={!!errors.title} />{errors.title && <span className="field-error">{errors.title.message}</span>}</label>
-          <RichQuoteEditor label="Mô tả" value={watch("description_rich") ?? (watch("description") ? {type:"doc",content:watch("description").split("\n").map(text => ({type:"paragraph",content:text ? [{type:"text",text}] : []}))} : null)} onChange={v => { change("description_rich", v); change("description", ""); }} />
-          {errors.description_rich && <span className="field-error">{String(errors.description_rich.message)}</span>}
-          <MusicEditor file={musicFile} path={watch("music_path")} onChange={(file,remove)=>{setMusicFile(file);if(remove)change("music_path",null)}} />
-          <label>Quote 1 — Nội dung<textarea rows={4} maxLength={5000} {...register("quote_one")} /></label>
-          {watch("quote_one")?.trim() && <blockquote className="quote-one-preview">{watch("quote_one")}<footer>CLB Sinh viên Yêu thích Sách</footer></blockquote>}
-          <RichQuoteEditor value={watch("quote_two")} onChange={v => change("quote_two", v)} />
-          {errors.quote_two && <span className="field-error">{String(errors.quote_two.message)}</span>}
+          <label>
+            Tên sự kiện *
+            <AutoGrowingTextarea
+              {...register("title")}
+              value={watch("title")}
+              aria-label="Tên sự kiện *"
+              aria-invalid={!!errors.title}
+            />
+            {errors.title && (
+              <span className="field-error">{errors.title.message}</span>
+            )}
+          </label>
           {field("code", "Mã sự kiện")}
           {!event && (
-            <small>
+            <small className="field-hint">
               Để trống để tạo mã từ tên khi lưu lần đầu; nếu trùng hãy chỉnh mã.
             </small>
           )}
+        </fieldset>
+        <fieldset id="editor-time">
+          <legend>Thời gian</legend>
           <RangePicker
             label="Thời gian sự kiện"
             dateTime
@@ -263,7 +300,63 @@ function EventEditor({
           />
           <p className="footnote">Giờ Việt Nam (UTC+7), 00:00–23:59.</p>
         </fieldset>
-        <fieldset>
+        <fieldset id="editor-content">
+          <legend>Nội dung & nhạc nền</legend>
+          <RichQuoteEditor
+            label="Mô tả"
+            value={
+              watch("description_rich") ??
+              (watch("description")
+                ? {
+                    type: "doc",
+                    content: watch("description")
+                      .split("\n")
+                      .map((text) => ({
+                        type: "paragraph",
+                        content: text ? [{ type: "text", text }] : [],
+                      })),
+                  }
+                : null)
+            }
+            onChange={(v) => {
+              change("description_rich", v);
+              change("description", "");
+            }}
+          />
+          {errors.description_rich && (
+            <span className="field-error">
+              {String(errors.description_rich.message)}
+            </span>
+          )}
+          <MusicEditor
+            file={musicFile}
+            path={watch("music_path")}
+            onChange={(file, remove) => {
+              setMusicFile(file);
+              if (remove) change("music_path", null);
+            }}
+          />
+          <label>
+            Quote 1 — Nội dung
+            <textarea rows={4} maxLength={5000} {...register("quote_one")} />
+          </label>
+          {watch("quote_one")?.trim() && (
+            <blockquote className="quote-one-preview">
+              {watch("quote_one")}
+              <footer>CLB Sinh viên Yêu thích Sách</footer>
+            </blockquote>
+          )}
+          <RichQuoteEditor
+            value={watch("quote_two")}
+            onChange={(v) => change("quote_two", v)}
+          />
+          {errors.quote_two && (
+            <span className="field-error">
+              {String(errors.quote_two.message)}
+            </span>
+          )}
+        </fieldset>
+        <fieldset id="editor-venue">
           <legend>Địa điểm</legend>
           <fieldset>
             <legend>Chọn phương thức liên kết địa điểm</legend>
@@ -339,6 +432,23 @@ function EventEditor({
           selected={selected}
           onChange={setSelected}
         />
+        <fieldset id="editor-publish">
+          <legend>Công bố & thiệp mời</legend>
+          <p className="field-hint">
+            Bản nháp chỉ dành cho quản trị. Khi công bố, sự kiện và thiệp đã lưu
+            sẽ hiển thị qua liên kết tương ứng.
+          </p>
+          <Switch
+            checked={watch("status") === "published"}
+            label={
+              watch("status") === "published"
+                ? "Đã công khai (lưu để áp dụng)"
+                : "Bản nháp / Không công khai"
+            }
+            onChange={(v) => change("status", v ? "published" : "draft")}
+          />
+          {event && <a href="#invitation-links">Đến danh sách thiệp mời</a>}
+        </fieldset>
         {dirty && (
           <div className="save-bar dirty-save-bar">
             <span>Có thay đổi chưa lưu</span>
