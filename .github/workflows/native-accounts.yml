@@ -1,12 +1,6 @@
 name: Native account invitation sandbox
 on:
-  push:
-    branches: [hsv-v3]
-    paths:
-      - "supabase/functions/manage-editors/**"
-      - "supabase/migrations/202611200002*"
-      - "scripts/test-hsv-native.mjs"
-      - ".github/workflows/native-accounts.yml"
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read

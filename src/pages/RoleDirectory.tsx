@@ -295,9 +295,11 @@ export default function RoleDirectory() {
               <button disabled={busy || feedback?.success === true}>
                 {busy
                   ? "Đang xử lý…"
-                  : feedback
-                    ? "Kiểm tra và khôi phục"
-                    : "Thêm Editor"}
+                  : feedback?.success
+                    ? "Đã có quyền Editor"
+                    : feedback
+                      ? "Kiểm tra và khôi phục"
+                      : "Thêm Editor"}
               </button>
               <button
                 type="button"

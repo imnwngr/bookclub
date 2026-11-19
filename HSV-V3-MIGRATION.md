@@ -1,6 +1,6 @@
 # HSV 3.0.0: migration và chuyển đổi
 
-**Production chưa được thay đổi.** Hai migration mới đã được thử local; chưa có bằng chứng schema, migration history, backup/restore và Edge revision hiện tại qua kết nối quản trị. REST công khai xác nhận project `trdofhdspbkwgernwybp` chưa có cột v3. CLI 3.2.0 lấy từ package chính thức `supabase` (repository github.com/supabase/cli) chạy được nhưng chưa được đăng nhập. Docker daemon trả 500, nên native Auth/SMTP sandbox chưa chạy. Không đưa password/token vào chat hoặc repository.
+**Production chưa được thay đổi.** Hai migration mới đã được thử local; chưa có bằng chứng schema, migration history, backup/restore và Edge revision hiện tại qua kết nối quản trị. REST công khai xác nhận project `trdofhdspbkwgernwybp` chưa có cột v3. CLI 3.2.0 lấy từ package chính thức `supabase` (repository github.com/supabase/cli) chạy được nhưng chưa được đăng nhập. Docker máy cá nhân chưa dùng được; native Auth/Edge/SMTP sandbox đã PASS trên GitHub runner tách biệt, xem HSV-V3-VERIFICATION.md. Không đưa password/token vào chat hoặc repository.
 
 ## Trước khi ghi production
 
@@ -42,7 +42,7 @@ Schema `{version:1,primary:'#RRGGBB'}` không nhận key khác/raw CSS. Giá tr�
 
 Chỉ rename khi backend/recovery gate và local/CI tests đã PASS. Recheck `imnwngr/hsv` không tồn tại; `gh api -X PATCH repos/imnwngr/bookclub -f name=hsv`, rồi `git remote set-url origin https://github.com/imnwngr/hsv.git`. Không đổi thư mục local. Kiểm tra lại Pages source workflow, repository variables/secrets và quyền Actions sau rename. Chưa thực hiện các lệnh này trong lần triển khai local.
 
-Workflow mới chạy verify cho main/hsv-v3 và PR. Deploy chỉ cho main tại `imnwngr/hsv`, khi repository variable `HSV_V3_PRODUCTION_READY=true`; trước deploy chạy capability check read-only. Biến gate chỉ được bật sau khi operator có bằng chứng backup, migration, native Auth/Edge/email và smoke phù hợp. Không set true chỉ vì unit tests xanh. Không overwrite tag v3.0.0; tag tạo sau đủ điều kiện release.
+Workflow mới chạy verify và native account sandbox cho main/hsv-v3 và PR; deploy cần cả hai job PASS. Native workflow có thể chạy thủ công; harness chỉ dùng stack loopback tên `hsv-v3-native`, không nhận URL/credential production. CLI 3 dùng `[local_smtp]`, bật verify_jwt, không relay; chỉ upload result JSON và screenshots fixture, không upload status keys/logs Auth. Deploy chỉ cho main tại `imnwngr/hsv`, khi repository variable `HSV_V3_PRODUCTION_READY=true`; trước deploy chạy capability check read-only. Biến gate chỉ được bật sau khi operator có bằng chứng backup, migration, native Auth/Edge/email và smoke phù hợp. Không set true chỉ vì unit tests xanh. Không overwrite tag v3.0.0; tag tạo sau đủ điều kiện release.
 
 Canonical: `/hsv/thiep-moi/:code/:alias`, `/hsv/thiep-chuc/:code/:alias`; detail bỏ phần alias. Sai loại hoặc URL ngắn `/hsv/:code/:alias` chuyển canonical sau resolver kiểm quyền, giữ query/hash. Slug admin/auth/thiep-moi/thiep-chuc được bảo vệ. 404 Pages round-trip đã được test ở local server mô phỏng HTTP 404.
 

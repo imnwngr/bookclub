@@ -36,3 +36,5 @@ Không sửa bucket bookclub-venues/bookclub-music, env names hiện có, histor
 ## Đối chiếu sau triển khai local
 
 Quyền GitHub kiểm tra lại vẫn ADMIN; target hsv trả HTTP 404; remote main vẫn tại 8ee2e3e. Production read-only vẫn thiếu cột v3 (42703), Pages vẫn phục vụ bundle cũ. Plugin Supabase có trong danh mục nhưng chưa connected (đã được đề xuất từ preflight); CLI chính thức chạy được nhưng chưa có token. Không nhắc lại yêu cầu kết nối nhiều lần. Source/kiểm thử/tài liệu tiếp tục được hoàn thiện độc lập; không rename hoặc bật deploy khi backend còn thiếu.
+
+Đã giải quyết hạn chế Docker local bằng Supabase native trên GitHub runner tách biệt: 10 nhóm kiểm tra Auth/Edge/PostgREST/SMTP/browser PASS, gồm accept thành công, retry/concurrency, lỗi cấp quyền sau gửi thư, SMTP outage, expired/reused link và banned account. Workflow native trở thành điều kiện trước deploy. Chỉ còn thiếu kết nối quản trị production để audit/backup/restore và rollout; không coi sandbox synthetic là production.

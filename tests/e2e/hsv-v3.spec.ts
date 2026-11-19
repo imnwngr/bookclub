@@ -294,6 +294,9 @@ test("v3 add Editor dialog handles default, loading, partial error, retry and pe
     .getByRole("button", { name: "Kiểm tra và khôi phục", exact: true })
     .click();
   await expect(dialog.getByText(/đang chờ người nhận hoàn tất/)).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Đã có quyền Editor", exact: true }),
+  ).toBeDisabled();
   await capture(page, `account-pending-${info.project.name}`);
   expect(calls).toBe(2);
   expect(

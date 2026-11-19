@@ -10,6 +10,8 @@ concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  native-accounts:
+    uses: ./.github/workflows/native-accounts.yml
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -49,7 +51,7 @@ jobs:
           path: dist
   deploy:
     if: github.ref == 'refs/heads/main' && github.repository == 'imnwngr/hsv' && vars.HSV_V3_PRODUCTION_READY == 'true' && github.event_name != 'pull_request'
-    needs: verify
+    needs: [verify, native-accounts]
     runs-on: ubuntu-latest
     permissions:
       pages: write
