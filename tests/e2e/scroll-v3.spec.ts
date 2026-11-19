@@ -210,6 +210,7 @@ test("paper and emerald materials survive initial boot and route navigation", as
     .getByRole("link", { name: "Thông tin sự kiện", exact: true })
     .click();
   await expect(page).toHaveURL(/\/design-fixture$/);
+  await expect(page.locator(".detail h1")).toHaveText(designEvent.title);
   await page.goBack();
   await expect(
     page.getByRole("button", { name: "Mở thiệp mời" }),

@@ -1,6 +1,8 @@
 import { Suspense, useEffect, useRef, useState } from "react";
-import type { EventTheme } from "../types/domain";
-import { EventThemeContext } from "../hooks/useEventTheme";
+import {
+  EventThemeContext,
+  type RouteEventTheme,
+} from "../hooks/useEventTheme";
 import { themeStyle } from "../lib/eventTheme";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
@@ -8,7 +10,7 @@ import { Loading } from "./Feedback";
 import { HsvLogo } from "./HsvLogo";
 
 export function SiteLayout() {
-  const [eventTheme, setEventTheme] = useState<EventTheme | null>(null);
+  const [eventTheme, setEventTheme] = useState<RouteEventTheme | null>(null);
   const location = useLocation();
   const menu = useRef<HTMLDialogElement>(null);
   const main = useRef<HTMLElement>(null);
@@ -35,7 +37,11 @@ export function SiteLayout() {
     <EventThemeContext value={setEventTheme}>
       <div
         className={`site ${isAdmin ? "site-admin" : ""} ${isInvitation ? "site-invitation" : ""}`}
-        style={eventTheme ? themeStyle(eventTheme) : undefined}
+        style={
+          eventTheme?.locationKey === location.key
+            ? themeStyle(eventTheme.theme)
+            : undefined
+        }
       >
         <a className="skip-link" href="#main">
           Đến nội dung chính

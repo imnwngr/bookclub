@@ -230,13 +230,8 @@ for (const primary of ["#174b78", "#173f36", "#873c42"])
     await page
       .getByRole("link", { name: "Tất cả sự kiện", exact: true })
       .click();
-    expect(
-      await page
-        .locator(".site")
-        .evaluate((e) =>
-          getComputedStyle(e).getPropertyValue("--event-primary"),
-        ),
-    ).toBe("");
+    await expect(page.locator(".editorial-hero")).toBeVisible();
+    await expect(page.locator(".site")).toHaveCSS("--event-primary", "");
   });
 test("v3 add Editor dialog handles default, loading, partial error, retry and pending success (mock API, no email)", async ({
   page,
