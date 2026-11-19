@@ -46,6 +46,15 @@ Deno.serve(async request => {
     if (typeof body.email !== "string" || body.email.length > 254 || !emailPattern.test(body.email.trim())) return reply(400, { code: "invalid_email" });
     const email = body.email.trim().toLowerCase();
     if (body.action === "invite") return reply(409, { code: "client_upgrade_required" });
+    // Older clients grant existing accounts without an operation ID during backend-first rollout.
+    // They cannot send invitations; keep their request stable across response loss and retries.
+    if (body.action === "grant" && body.request_id === undefined) {
+      const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`hsv-v3-legacy-grant:${user.data.user.id}:${email}`)));
+      digest[6] = (digest[6] & 0x0f) | 0x50;
+      digest[8] = (digest[8] & 0x3f) | 0x80;
+      const hex = Array.from(digest.slice(0, 16), byte => byte.toString(16).padStart(2, "0")).join("");
+      body.request_id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
     if (typeof body.request_id !== "string" || !uuid.test(body.request_id)) return reply(400, { code: "invalid_request" });
     if (mode === "fixture") {
       const target = await service.auth.admin.getUserById(fixture!);

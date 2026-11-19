@@ -260,6 +260,28 @@ verify_jwt = true
       "Native existing-account grant failed",
     );
     passed("Auth JWT + server Admin verification + existing-account grant");
+    const legacyAccount = await create("legacy-client@fixture.invalid");
+    const legacyGrant = {
+      action: "grant",
+      role: "editor",
+      email: legacyAccount.email,
+    };
+    assert.equal((await request(legacyGrant)).body.state, "granted");
+    assert.equal((await request(legacyGrant)).body.state, "already_editor");
+    assert.equal(
+      (
+        await request({
+          action: "revoke",
+          role: "editor",
+          user_id: legacyAccount.id,
+        })
+      ).body.state,
+      "revoked",
+    );
+    assert.equal((await request(legacyGrant)).body.state, "role_changed");
+    passed(
+      "Legacy frontend grant remains compatible; retry after revoke cannot regrant",
+    );
 
     // The local mail sink captures SMTP. No relay or production provider is configured.
     const mailpit = (await fetch(mail + "/api/v1/messages")).ok;

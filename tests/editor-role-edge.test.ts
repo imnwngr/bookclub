@@ -37,24 +37,20 @@ beforeEach(() => {
     BOOKCLUB_ROLE_MODE: "live",
     HSV_INVITATIONS_ENABLED: "verified",
   });
-  rpc
-    .mockReset()
-    .mockImplementation(async (name) => ({
-      data:
-        name === "begin_editor_add"
-          ? { state: "invite", lease, target: null }
-          : { state: "granted", account_status: "invited" },
-      error: null,
-    }));
+  rpc.mockReset().mockImplementation(async (name) => ({
+    data:
+      name === "begin_editor_add"
+        ? { state: "invite", lease, target: null }
+        : { state: "granted", account_status: "invited" },
+    error: null,
+  }));
   invite
     .mockReset()
     .mockResolvedValue({ data: { user: { id: target } }, error: null });
-  getUser
-    .mockReset()
-    .mockResolvedValue({
-      data: { user: { id: target, email: add.email } },
-      error: null,
-    });
+  getUser.mockReset().mockResolvedValue({
+    data: { user: { id: target, email: add.email } },
+    error: null,
+  });
   const caller = {
     auth: {
       getUser: async () => ({
@@ -135,6 +131,32 @@ it("existing and already-Editor accounts never send an invitation", async () => 
     }));
     expect((await handler(request(add))).status).toBe(200);
   }
+  expect(invite).not.toHaveBeenCalled();
+});
+it("keeps legacy existing-account grants compatible and stable without enabling email or a new add request", async () => {
+  rpc.mockImplementation(async (name) => ({
+    data:
+      name === "begin_editor_add"
+        ? { state: "grant", lease, target }
+        : { state: "granted", account_status: "confirmed" },
+    error: null,
+  }));
+  const legacy = { action: "grant", role: "editor", email: add.email };
+  expect((await handler(request(legacy))).status).toBe(200);
+  expect(
+    (await handler(request({ ...legacy, email: " NEW@FIXTURE.INVALID " })))
+      .status,
+  ).toBe(200);
+  const claims = rpc.mock.calls.filter(([name]) => name === "begin_editor_add");
+  expect(claims[0][1].p_request_id).toMatch(/^[a-f0-9-]{36}$/);
+  expect(claims[1][1].p_request_id).toBe(claims[0][1].p_request_id);
+  expect(claims[0][1].p_allow_invite).toBe(false);
+  expect(invite).not.toHaveBeenCalled();
+  expect((await handler(request({ ...legacy, action: "add" }))).status).toBe(
+    400,
+  );
+  rpc.mockResolvedValue({ data: { state: "role_changed" }, error: null });
+  expect((await handler(request(legacy))).status).toBe(409);
   expect(invite).not.toHaveBeenCalled();
 });
 it("double-click, unknown delivery and retries cannot send when ledger refuses a claim", async () => {
