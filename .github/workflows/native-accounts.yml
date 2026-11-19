@@ -1,0 +1,41 @@
+name: Native account invitation sandbox
+on:
+  push:
+    branches: [hsv-v3]
+    paths:
+      - "supabase/functions/manage-editors/**"
+      - "supabase/migrations/202611200002*"
+      - "scripts/test-hsv-native.mjs"
+      - ".github/workflows/native-accounts.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-accounts-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/test-hsv-native.mjs prepare
+      - name: Start disposable services (no remote project or production secrets)
+        run: npx --yes supabase@3.2.0 start --workdir .local/hsv-v3/native/stack -x studio,realtime,storage-api,imgproxy,postgres-meta,logflare,vector,supavisor > .local/hsv-v3/native/stack.log 2>&1
+      - run: node scripts/test-hsv-native.mjs test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-account-evidence
+          path: |
+            .local/hsv-v3/native/result.json
+            .local/hsv-v3/native/native-*.png
+      - name: Stop only the disposable CI stack
+        if: always()
+        run: npx --yes supabase@3.2.0 stop --workdir .local/hsv-v3/native/stack
