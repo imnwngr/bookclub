@@ -32,7 +32,7 @@ it("creates canonical slugs from Vietnamese names without salutations", () => {
   );
 });
 it("copies one effective primary link per guest in current event and order", () => {
-  vi.stubEnv("BASE_URL", "/bookclub/");
+  vi.stubEnv("BASE_URL", "/hsv/");
   const a: Invitation = {
     id: "a",
     event_id: "e",
@@ -51,7 +51,7 @@ it("copies one effective primary link per guest in current event and order", () 
   ]);
   expect(value.split("\n")).toHaveLength(1);
   expect(value).toContain("Thầy ThS. Nguyễn Hoàng Viện:");
-  expect(value).toContain("/bookclub/new-code/nguyen-hoang-vien");
+  expect(value).toContain("/hsv/thiep-moi/new-code/nguyen-hoang-vien");
 });
 it("uses selected Place ID despite a preserved older Maps URL", () => {
   expect(

@@ -2,6 +2,12 @@ import type { ClubEvent } from "../types/domain";
 import { formatDate, mapLink } from "../lib/domain";
 import { VenueImage } from "./VenueImage";
 export function EventInfo({ event }: { event: ClubEvent }) {
+  if (
+    event.event_type === "congratulation" ||
+    !event.starts_at ||
+    !event.ends_at
+  )
+    return null;
   const url = mapLink(event);
   return (
     <section>

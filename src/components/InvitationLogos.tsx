@@ -5,7 +5,6 @@ export function InvitationLogos() {
         ["doan", "Logo Đoàn Thanh niên"],
         ["hoi", "Logo Hội Sinh viên"],
         ["ctut", "Logo Trường Đại học Kỹ thuật – Công nghệ Cần Thơ"],
-        ["bookclub", "Logo BookClub CTUT"],
       ].map(([key, alt]) => (
         <picture key={key}>
           <source

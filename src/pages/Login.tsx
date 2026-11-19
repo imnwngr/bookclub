@@ -16,7 +16,7 @@ export default function Login() {
       </div>
       <section className="login panel">
         <p className="section-label">Dành cho ban quản trị</p>
-        <h1>Quản lý BookClub</h1>
+        <h1>Quản lý sự kiện</h1>
         <p>Đăng nhập bằng tài khoản đã được cấp quyền.</p>
         <form
           onSubmit={async (e) => {

@@ -8,6 +8,9 @@ import {
   filterEvents,
   formatDate,
   invitationUrl,
+  eventListDate,
+  orderEvents,
+  typeLabel,
 } from "../lib/domain";
 import { errorMessage } from "../lib/supabase";
 import { Empty, ErrorState, Loading } from "../components/Feedback";
@@ -30,14 +33,15 @@ export default function Dashboard() {
   const [deleting, setDeleting] = useState<ClubEvent | null>(null);
   const [busy, setBusy] = useState(false);
   const events = query.data ?? [];
-  const filtered = filterEvents(events, month, year, search).filter(
-    (e) => !status || e.status === status,
-  );
+  const filtered = orderEvents(
+    filterEvents(events, month, year, search),
+    now,
+  ).filter((e) => !status || e.status === status);
   return (
     <section className="admin">
       <div className="section-head">
         <div>
-          <p className="section-label">Lịch hoạt động của câu lạc bộ</p>
+          <p className="section-label">Sự kiện Hội Sinh viên CTUT</p>
           <h1>Quản lý sự kiện</h1>
         </div>
         <div className="actions">
@@ -66,7 +70,10 @@ export default function Dashboard() {
               {
                 events.filter(
                   (e) =>
-                    e.status === "published" && Date.parse(e.starts_at) > now,
+                    e.status === "published" &&
+                    e.event_type !== "congratulation" &&
+                    !!e.starts_at &&
+                    Date.parse(e.starts_at) > now,
                 ).length
               }
             </dd>
@@ -88,7 +95,7 @@ export default function Dashboard() {
           year={year}
           setMonth={setMonth}
           setYear={setYear}
-          years={[...new Set(events.map((e) => eventYear(e.starts_at)))]
+          years={[...new Set(events.map((e) => eventYear(eventListDate(e))))]
             .sort()
             .reverse()}
         />
@@ -101,6 +108,9 @@ export default function Dashboard() {
           </select>
         </label>
       </div>
+      <p className="field-hint">
+        Lọc theo ngày diễn ra của Thiệp mời và ngày tạo của Thiệp chúc.
+      </p>
       {!query.isPending && !query.error && (
         <p className="result-count" role="status">
           {filtered.length} sự kiện trong danh sách
@@ -121,25 +131,29 @@ export default function Dashboard() {
                   {event.status === "published" ? "Đã công bố" : "Bản nháp"}
                 </span>
                 <span className="event-code">{event.code}</span>
+                <span>{typeLabel(event.event_type)}</span>
               </div>
               <h2 className="event-title">{event.title}</h2>
               <p>
                 <CalendarDays size={16} aria-hidden="true" />
-                {formatDate(event.starts_at)}
+                {event.event_type === "congratulation" ? "Ngày tạo: " : ""}
+                {formatDate(eventListDate(event))}
               </p>
               <div className="actions">
                 <Link
                   className="button secondary"
                   to={`/admin/edit/${event.code}`}
                 >
-                  Chỉnh sửa & thiệp mời{" "}
+                  Chỉnh sửa & thiệp{" "}
                   <ArrowUpRight size={16} aria-hidden="true" />
                 </Link>
                 <button
                   className="secondary"
                   onClick={() =>
                     void navigator.clipboard
-                      .writeText(invitationUrl(event.code))
+                      .writeText(
+                        invitationUrl(event.code, undefined, event.event_type),
+                      )
                       .then(
                         () => toast.success("Đã sao chép liên kết"),
                         () => toast.error("Không thể truy cập clipboard"),

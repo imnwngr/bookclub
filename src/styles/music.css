@@ -1,11 +1,11 @@
 .music-dock {
   --orb-size: 52px;
-  --music-track: #435d51;
+  --music-track: var(--brand);
   --music-glass-background: linear-gradient(
     135deg,
     #ffffffe8 0%,
-    #dcece1bf 45%,
-    #b9d5c7d9 100%
+    color-mix(in srgb, var(--sage) 75%, transparent) 45%,
+    color-mix(in srgb, var(--sage) 85%, transparent) 100%
   );
   position: fixed;
   z-index: 60;

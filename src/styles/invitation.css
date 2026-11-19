@@ -160,7 +160,7 @@
   border: 4px double var(--gold);
   box-shadow: 0 4px 0 var(--border);
 }
-.letter-seal .bookclub-logo {
+.letter-seal .organization-logo {
   width: 56px;
 }
 .invitation-cover .open-invitation {
@@ -702,7 +702,7 @@ html:has(.invitation.opened) {
   width: fit-content;
   margin-inline: auto;
 }
-.closing-mark .bookclub-logo {
+.closing-mark .organization-logo {
   width: 80px;
 }
 .invitation-signoff {
@@ -736,8 +736,7 @@ html:has(.invitation.opened) {
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .invitation-greeting
-    > :is(h1, .greeting-salutation, .guest-description) {
+  .invitation-greeting > :is(h1, .greeting-salutation, .guest-description) {
     animation: greeting-enter var(--motion-cinematic) var(--ease-out) both;
   }
   .invitation-greeting > h1 {

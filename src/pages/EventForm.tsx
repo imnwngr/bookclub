@@ -1,4 +1,7 @@
 import { AutoGrowingTextarea } from "../components/AutoGrowingTextarea";
+import { EventAppearance } from "../components/EventAppearance";
+import { DEFAULT_THEME, normalizeTheme } from "../lib/eventTheme";
+import "../styles/materials.css";
 import { MusicEditor } from "../components/MusicEditor";
 import { uploadMusic, discardMusic } from "../features/events/music";
 import { RichQuoteEditor } from "../components/RichQuoteEditor";
@@ -78,6 +81,7 @@ function EventEditor({
       ? "place"
       : "url";
   const initial: EventInput = {
+    event_type: "invitation",
     code: "",
     title: "",
     description: "",
@@ -95,6 +99,7 @@ function EventEditor({
     longitude: null,
     place_id: "",
     ...event,
+    theme: normalizeTheme(event?.theme ?? DEFAULT_THEME),
     location_method: initialMethod,
     maps_url:
       initialMethod === "url"
@@ -152,6 +157,7 @@ function EventEditor({
     </label>
   );
   const location = watch("location_method");
+  const congratulation = watch("event_type") === "congratulation";
   const url = mapLink(watch());
   return (
     <section className="editor" inert={saving}>
@@ -164,18 +170,21 @@ function EventEditor({
       <nav className="editor-nav" aria-label="Các phần của sự kiện">
         {[
           ["basics", "Thông tin"],
+          ["appearance", "Giao diện"],
           ["time", "Thời gian"],
           ["content", "Nội dung & nhạc"],
           ["venue", "Địa điểm & ảnh"],
           ["agenda", "Chương trình"],
           ["guests", "Khách mời"],
           ["publish", "Công bố & thiệp"],
-        ].map(([id, label], index) => (
-          <a key={id} href={`#editor-${id}`}>
-            <span aria-hidden="true">0{index + 1}</span>
-            {label}
-          </a>
-        ))}
+        ]
+          .filter(([id]) => !congratulation || !["time", "venue"].includes(id))
+          .map(([id, label], index) => (
+            <a key={id} href={`#editor-${id}`}>
+              <span aria-hidden="true">0{index + 1}</span>
+              {label}
+            </a>
+          ))}
       </nav>
       <form
         noValidate
@@ -268,6 +277,40 @@ function EventEditor({
       >
         <fieldset id="editor-basics">
           <legend>Thông tin sự kiện</legend>
+          <fieldset className="event-type-picker">
+            <legend>Loại thiệp</legend>
+            <div className="event-type-options">
+              {(["invitation", "congratulation"] as const).map((type) => (
+                <label
+                  key={type}
+                  className={`event-type-option ${watch("event_type") === type ? "selected" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    {...register("event_type")}
+                    value={type}
+                  />
+                  <span>
+                    <strong>
+                      {type === "invitation" ? "Thiệp mời" : "Thiệp chúc"}
+                    </strong>
+                    <small>
+                      {type === "invitation"
+                        ? "Mời tham dự, có thời gian và địa điểm."
+                        : "Gửi lời chúc, không cần thời gian hay địa điểm."}
+                    </small>
+                  </span>
+                </label>
+              ))}
+            </div>
+            {congratulation && (
+              <p className="notice" role="status">
+                Thời gian và địa điểm đã nhập được giữ lại khi lưu, nhưng không
+                xuất hiện trên Thiệp chúc. Chọn lại Thiệp mời để tiếp tục chỉnh
+                sửa.
+              </p>
+            )}
+          </fieldset>
           <label>
             Tên sự kiện *
             <AutoGrowingTextarea
@@ -287,19 +330,26 @@ function EventEditor({
             </small>
           )}
         </fieldset>
-        <fieldset id="editor-time">
-          <legend>Thời gian</legend>
-          <RangePicker
-            label="Thời gian sự kiện"
-            dateTime
-            start={watch("starts_at")}
-            end={watch("ends_at")}
-            onStart={(v) => change("starts_at", v)}
-            onEnd={(v) => change("ends_at", v)}
-            error={errors.starts_at?.message || errors.ends_at?.message}
-          />
-          <p className="footnote">Giờ Việt Nam (UTC+7), 00:00–23:59.</p>
-        </fieldset>
+        <EventAppearance
+          value={watch("theme")}
+          type={watch("event_type")}
+          onChange={(v) => change("theme", v)}
+        />
+        {!congratulation && (
+          <fieldset id="editor-time">
+            <legend>Thời gian</legend>
+            <RangePicker
+              label="Thời gian sự kiện"
+              dateTime
+              start={watch("starts_at") ?? ""}
+              end={watch("ends_at") ?? ""}
+              onStart={(v) => change("starts_at", v)}
+              onEnd={(v) => change("ends_at", v)}
+              error={errors.starts_at?.message || errors.ends_at?.message}
+            />
+            <p className="footnote">Giờ Việt Nam (UTC+7), 00:00–23:59.</p>
+          </fieldset>
+        )}
         <fieldset id="editor-content">
           <legend>Nội dung & nhạc nền</legend>
           <RichQuoteEditor
@@ -343,7 +393,6 @@ function EventEditor({
           {watch("quote_one")?.trim() && (
             <blockquote className="quote-one-preview">
               {watch("quote_one")}
-              <footer>CLB Sinh viên Yêu thích Sách</footer>
             </blockquote>
           )}
           <RichQuoteEditor
@@ -356,68 +405,72 @@ function EventEditor({
             </span>
           )}
         </fieldset>
-        <fieldset id="editor-venue">
-          <legend>Địa điểm</legend>
-          <fieldset>
-            <legend>Chọn phương thức liên kết địa điểm</legend>
-            <div className="location-choices">
-              {(["url", "place"] as const).map((v) => (
-                <label
-                  className={`location-choice ${location === v ? "selected" : ""}`}
-                  key={v}
-                >
-                  <input
-                    type="radio"
-                    aria-label={
-                      v === "url" ? "Google Maps URL" : "Google Place ID"
-                    }
-                    name="location-method"
-                    checked={location === v}
-                    onChange={() => change("location_method", v)}
-                  />
-                  <LocationMethodIcon method={v} />
-                  <span>
-                    <strong>
-                      {v === "url" ? "Google Maps URL" : "Google Place ID"}
-                    </strong>
-                    <small>
-                      {v === "url"
-                        ? "Dán liên kết chia sẻ từ Google Maps, kể cả link rút gọn."
-                        : "Dùng mã định danh chính xác của địa điểm trên Google Maps."}
-                    </small>
-                  </span>
-                </label>
-              ))}
-            </div>
+        {!congratulation && (
+          <fieldset id="editor-venue">
+            <legend>Địa điểm</legend>
+            <fieldset>
+              <legend>Chọn phương thức liên kết địa điểm</legend>
+              <div className="location-choices">
+                {(["url", "place"] as const).map((v) => (
+                  <label
+                    className={`location-choice ${location === v ? "selected" : ""}`}
+                    key={v}
+                  >
+                    <input
+                      type="radio"
+                      aria-label={
+                        v === "url" ? "Google Maps URL" : "Google Place ID"
+                      }
+                      name="location-method"
+                      checked={location === v}
+                      onChange={() => change("location_method", v)}
+                    />
+                    <LocationMethodIcon method={v} />
+                    <span>
+                      <strong>
+                        {v === "url" ? "Google Maps URL" : "Google Place ID"}
+                      </strong>
+                      <small>
+                        {v === "url"
+                          ? "Dán liên kết chia sẻ từ Google Maps, kể cả link rút gọn."
+                          : "Dùng mã định danh chính xác của địa điểm trên Google Maps."}
+                      </small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <p className="field-hint">
+              {location === "url"
+                ? "Mở Google Maps → Chia sẻ → Sao chép liên kết HTTPS."
+                : "Nhập Place ID; nút xem trước giúp kiểm tra đúng địa điểm."}
+            </p>
+            {location === "url" && field("maps_url", "Google Maps URL *")}
+            {location === "place" && field("place_id", "Google Place ID *")}
+            {field("venue_name", "Tên địa điểm")}
+            {field("address", "Địa chỉ")}
+            <label>
+              Hướng dẫn vị trí
+              <textarea {...register("directions")} />
+            </label>
+            {url && (
+              <a href={url} target="_blank" rel="noopener noreferrer">
+                Xem trước vị trí trên Google Maps
+              </a>
+            )}
           </fieldset>
-          <p className="field-hint">
-            {location === "url"
-              ? "Mở Google Maps → Chia sẻ → Sao chép liên kết HTTPS."
-              : "Nhập Place ID; nút xem trước giúp kiểm tra đúng địa điểm."}
-          </p>
-          {location === "url" && field("maps_url", "Google Maps URL *")}
-          {location === "place" && field("place_id", "Google Place ID *")}
-          {field("venue_name", "Tên địa điểm")}
-          {field("address", "Địa chỉ")}
-          <label>
-            Hướng dẫn vị trí
-            <textarea {...register("directions")} />
-          </label>
-          {url && (
-            <a href={url} target="_blank" rel="noopener noreferrer">
-              Xem trước vị trí trên Google Maps
-            </a>
-          )}
-        </fieldset>
-        <ImageEditor
-          file={imageFile}
-          path={watch("venue_image_path")}
-          disabled={saving}
-          onChange={(file, remove) => {
-            setImageFile(file);
-            if (remove) change("venue_image_path", null);
-          }}
-        />
+        )}
+        {!congratulation && (
+          <ImageEditor
+            file={imageFile}
+            path={watch("venue_image_path")}
+            disabled={saving}
+            onChange={(file, remove) => {
+              setImageFile(file);
+              if (remove) change("venue_image_path", null);
+            }}
+          />
+        )}
         <AgendaEditor
           items={watch("agenda") ?? []}
           onChange={(v) => change("agenda", v)}
@@ -433,7 +486,7 @@ function EventEditor({
           onChange={setSelected}
         />
         <fieldset id="editor-publish">
-          <legend>Công bố & thiệp mời</legend>
+          <legend>Công bố & thiệp</legend>
           <p className="field-hint">
             Bản nháp chỉ dành cho quản trị. Khi công bố, sự kiện và thiệp đã lưu
             sẽ hiển thị qua liên kết tương ứng.
@@ -447,7 +500,7 @@ function EventEditor({
             }
             onChange={(v) => change("status", v ? "published" : "draft")}
           />
-          {event && <a href="#invitation-links">Đến danh sách thiệp mời</a>}
+          {event && <a href="#invitation-links">Đến danh sách thiệp</a>}
         </fieldset>
         {dirty && (
           <div className="save-bar dirty-save-bar">
@@ -476,6 +529,7 @@ function EventEditor({
           invitations={invitations}
           code={event.code}
           eventId={event.id}
+          type={event.event_type}
         />
       )}
       {blocker.state === "blocked" && (

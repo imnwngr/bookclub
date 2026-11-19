@@ -2,6 +2,7 @@ import { z } from "zod";
 import { validQuoteDocument } from "./quoteDocument";
 import { isAgendaIcon } from "./agendaIcons";
 import { reservedCodes, safeMapUrl } from "./domain";
+import { themeSchema } from "./eventTheme";
 export const codeSchema = z
   .string()
   .regex(
@@ -21,6 +22,8 @@ export const aliasSchema = z
   .max(80);
 export const eventSchema = z
   .object({
+    event_type: z.enum(["invitation", "congratulation"]).optional(),
+    theme: themeSchema.optional(),
     code: z.union([codeSchema, z.literal("")]),
     title: z.string().trim().min(1, "Vui lòng nhập tên sự kiện.").max(240),
     description: z.string().max(10000),
@@ -37,8 +40,8 @@ export const eventSchema = z
         (v) => validQuoteDocument(v),
         "Quote 2 quá dài hoặc không hợp lệ.",
       ),
-    starts_at: z.string().min(1, "Chọn giờ bắt đầu."),
-    ends_at: z.string().min(1, "Chọn giờ kết thúc."),
+    starts_at: z.string().nullable(),
+    ends_at: z.string().nullable(),
     status: z.enum(["draft", "published"]),
     venue_name: z.string().max(240),
     address: z.string().max(1000),
@@ -89,24 +92,43 @@ export const eventSchema = z
         "Dùng liên kết HTTPS Google Maps hợp lệ.",
       ),
   })
-  .refine((v) => v.location_method !== "url" || Boolean(v.maps_url), {
-    path: ["maps_url"],
-    message: "Nhập liên kết Google Maps.",
-  })
   .refine(
     (v) =>
+      v.event_type === "congratulation" ||
+      v.location_method !== "url" ||
+      Boolean(v.maps_url),
+    {
+      path: ["maps_url"],
+      message: "Nhập liên kết Google Maps.",
+    },
+  )
+  .refine(
+    (v) =>
+      v.event_type === "congratulation" ||
       v.location_method !== "place" ||
       /^[A-Za-z0-9_-]{5,255}$/.test(v.place_id),
     { path: ["place_id"], message: "Nhập Google Place ID hợp lệ." },
   )
-  .refine((v) => Number.isFinite(Date.parse(v.starts_at)), {
-    path: ["starts_at"],
-    message: "Thời gian bắt đầu không hợp lệ.",
-  })
-  .refine((v) => Date.parse(v.ends_at) > Date.parse(v.starts_at), {
-    path: ["ends_at"],
-    message: "Kết thúc phải sau thời gian bắt đầu.",
-  })
+  .refine(
+    (v) =>
+      v.event_type === "congratulation" ||
+      (!!v.starts_at && Number.isFinite(Date.parse(v.starts_at))),
+    {
+      path: ["starts_at"],
+      message: "Thời gian bắt đầu không hợp lệ.",
+    },
+  )
+  .refine(
+    (v) =>
+      v.event_type === "congratulation" ||
+      (!!v.ends_at &&
+        !!v.starts_at &&
+        Date.parse(v.ends_at) > Date.parse(v.starts_at)),
+    {
+      path: ["ends_at"],
+      message: "Kết thúc phải sau thời gian bắt đầu.",
+    },
+  )
   .refine((v) => (v.latitude === null) === (v.longitude === null), {
     path: ["longitude"],
     message: "Nhập cả vĩ độ và kinh độ.",

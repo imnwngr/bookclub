@@ -1,4 +1,4 @@
-import {discardMusic} from "./music";
+import { discardMusic } from "./music";
 import { db } from "../../lib/supabase";
 import type {
   ClubEvent,
@@ -9,6 +9,16 @@ import type {
 import { guestAlias } from "../../lib/domain";
 import { discardVenueImage } from "./images";
 import { iconValuesRequiringMigration } from "../../lib/agendaIcons";
+import {
+  DEFAULT_THEME,
+  normalizeTheme,
+  themeSchema,
+} from "../../lib/eventTheme";
+const normalizeEvent = (event: ClubEvent): ClubEvent => ({
+  ...event,
+  event_type: event.event_type ?? "invitation",
+  theme: normalizeTheme(event.theme),
+});
 export async function listEvents(admin = false) {
   const events: ClubEvent[] = [];
   for (let offset = 0; ; offset += 500) {
@@ -21,27 +31,35 @@ export async function listEvents(admin = false) {
     if (!admin) query = query.eq("status", "published");
     const { data, error } = await query;
     if (error) throw error;
-    events.push(...(data as ClubEvent[]));
+    events.push(...(data as ClubEvent[]).map(normalizeEvent));
     if (data.length < 500) return events;
   }
 }
 export async function getEvent(code: string) {
   const { data, error } = await db().rpc("get_event_v110", { p_code: code });
   if (error) throw error;
-  return data as ClubEvent | null;
+  return data ? normalizeEvent(data as ClubEvent) : null;
 }
 export async function listGuests() {
   let { data, error } = await db()
-    .from("guests").select("*").order("display_order").order("id");
-  if (error?.code === "42703" || error?.code === "PGRST204") ({ data, error } = await db()
     .from("guests")
     .select("*")
-    .order("created_at").order("id"));
+    .order("display_order")
+    .order("id");
+  if (error?.code === "42703" || error?.code === "PGRST204")
+    ({ data, error } = await db()
+      .from("guests")
+      .select("*")
+      .order("created_at")
+      .order("id"));
   if (error) throw error;
   return data as Guest[];
 }
 export async function reorderGuests(expected: string[], order: string[]) {
-  const { error } = await db().rpc("reorder_guests", { p_expected: expected, p_order: order });
+  const { error } = await db().rpc("reorder_guests", {
+    p_expected: expected,
+    p_order: order,
+  });
   if (error) throw error;
 }
 export async function guestOrderAvailable() {
@@ -65,26 +83,65 @@ export async function resolveInvitation(code: string, alias: string) {
     p_alias: alias,
   });
   if (error) throw error;
-  return data as { event: ClubEvent; invitation: Invitation } | null;
+  const result = data as { event: ClubEvent; invitation: Invitation } | null;
+  return result ? { ...result, event: normalizeEvent(result.event) } : null;
 }
 export async function saveEvent(
   event: EventInput,
   guestIds: string[],
   existing?: ClubEvent,
 ) {
-  if (event.description_rich || existing?.description_rich || event.music_path || existing?.music_path) {
-    const capability = await db().from("events").select("description_rich,music_path").limit(0);
-    if (capability.error) throw Error("Database chưa hỗ trợ mô tả định dạng và nhạc MP3. Chưa lưu sự kiện.");
+  const capability = await db().rpc("hsv_v3_capabilities");
+  if (capability.error || capability.data?.version !== 3)
+    throw Error(
+      "Database chưa hỗ trợ phiên bản 3.0.0. Chưa lưu thay đổi; cần hoàn tất migration trước.",
+    );
+  if (
+    event.description_rich ||
+    existing?.description_rich ||
+    event.music_path ||
+    existing?.music_path
+  ) {
+    const capability = await db()
+      .from("events")
+      .select("description_rich,music_path")
+      .limit(0);
+    if (capability.error)
+      throw Error(
+        "Database chưa hỗ trợ mô tả định dạng và nhạc MP3. Chưa lưu sự kiện.",
+      );
   }
-  if (event.quote_one?.trim() || existing?.quote_one?.trim() || event.quote_two || existing?.quote_two) {
-    const capability = await db().from("events").select("quote_one,quote_two").limit(0);
-    if (capability.error) throw Error("Database chưa hỗ trợ quote. Chưa lưu sự kiện; cần áp dụng migration đã được duyệt.");
+  if (
+    event.quote_one?.trim() ||
+    existing?.quote_one?.trim() ||
+    event.quote_two ||
+    existing?.quote_two
+  ) {
+    const capability = await db()
+      .from("events")
+      .select("quote_one,quote_two")
+      .limit(0);
+    if (capability.error)
+      throw Error(
+        "Database chưa hỗ trợ quote. Chưa lưu sự kiện; cần áp dụng migration đã được duyệt.",
+      );
   }
-  const newIcons = (event.agenda ?? []).map((item) => item.icon).filter((icon): icon is string => !!icon && iconValuesRequiringMigration.has(icon));
+  const newIcons = (event.agenda ?? [])
+    .map((item) => item.icon)
+    .filter(
+      (icon): icon is string =>
+        !!icon && iconValuesRequiringMigration.has(icon),
+    );
   if (newIcons.length) {
     const capability = await db().rpc("agenda_icon_capabilities");
-    if (capability.error || !Array.isArray(capability.data) || newIcons.some((icon) => !capability.data.includes(icon)))
-      throw Error("Database chưa hỗ trợ icon mới. Chưa lưu sự kiện; cần áp dụng migration icon đã được phê duyệt.");
+    if (
+      capability.error ||
+      !Array.isArray(capability.data) ||
+      newIcons.some((icon) => !capability.data.includes(icon))
+    )
+      throw Error(
+        "Database chưa hỗ trợ icon mới. Chưa lưu sự kiện; cần áp dụng migration icon đã được phê duyệt.",
+      );
   }
   if (event.agenda?.some((item) => item.end_time || item.icon)) {
     const capability = await db()
@@ -97,7 +154,13 @@ export async function saveEvent(
       );
   }
   const { data, error } = await db().rpc("save_event", {
-    p_event: event,
+    p_event: {
+      ...event,
+      event_type: event.event_type ?? "invitation",
+      theme: themeSchema.parse(event.theme ?? DEFAULT_THEME),
+      starts_at: event.starts_at || null,
+      ends_at: event.ends_at || null,
+    },
     p_guest_ids: guestIds,
     p_id: existing?.id ?? null,
     p_expected_updated_at: existing?.updated_at ?? null,
@@ -114,7 +177,13 @@ export async function deleteEvent(id: string) {
   if (before.error) throw before.error;
   const { error } = await db().from("events").delete().eq("id", id);
   if (error) throw error;
-  if(before.data?.music_path){try{await discardMusic(before.data.music_path)}catch{throw Error("Sự kiện đã xóa; nhạc còn trong danh sách dọn file tạm.")}}
+  if (before.data?.music_path) {
+    try {
+      await discardMusic(before.data.music_path);
+    } catch {
+      throw Error("Sự kiện đã xóa; nhạc còn trong danh sách dọn file tạm.");
+    }
+  }
   if (before.data?.venue_image_path) {
     try {
       await discardVenueImage(before.data.venue_image_path);

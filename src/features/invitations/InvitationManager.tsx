@@ -1,14 +1,16 @@
 import { toast } from "sonner";
-import type { Invitation } from "../../types/domain";
-import { invitationUrl, invitationLines } from "../../lib/domain";
+import type { EventType, Invitation } from "../../types/domain";
+import { invitationUrl, invitationLines, typeLabel } from "../../lib/domain";
 export function InvitationManager({
   invitations,
   code,
   eventId,
+  type,
 }: {
   invitations: Invitation[];
   code: string;
   eventId: string;
+  type?: EventType;
 }) {
   const copy = async (text: string) => {
     try {
@@ -18,10 +20,10 @@ export function InvitationManager({
       toast.error("Không thể sao chép. Kiểm tra quyền clipboard.");
     }
   };
-  const lines = invitationLines(code, eventId, invitations);
+  const lines = invitationLines(code, eventId, invitations, type);
   return (
     <section className="invitation-manager" id="invitation-links">
-      <h2>Thiệp mời</h2>
+      <h2>{typeLabel(type)}</h2>
       <button type="button" disabled={!lines} onClick={() => void copy(lines)}>
         Sao chép tất cả
       </button>
@@ -33,12 +35,12 @@ export function InvitationManager({
               {i.salutation} {i.name}
             </h3>
             <span className="invitation-url">
-              {invitationUrl(code, i.primary_alias)}
+              {invitationUrl(code, i.primary_alias, type)}
             </span>
           </div>
           <div className="actions">
             <a
-              href={invitationUrl(code, i.primary_alias)}
+              href={invitationUrl(code, i.primary_alias, type)}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -47,7 +49,9 @@ export function InvitationManager({
             <button
               type="button"
               className="secondary"
-              onClick={() => void copy(invitationUrl(code, i.primary_alias))}
+              onClick={() =>
+                void copy(invitationUrl(code, i.primary_alias, type))
+              }
             >
               Sao chép link
             </button>
