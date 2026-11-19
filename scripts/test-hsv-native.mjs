@@ -126,6 +126,7 @@ verify_jwt = true
   };
   const start = (command, args, name, env = {}) => {
     const child = spawn(command, args, {
+      detached: process.platform !== "win32",
       env: { ...process.env, ...env },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -248,6 +249,10 @@ verify_jwt = true
           })
         ).status === 204,
       "Edge runtime",
+    );
+    await waitFor(
+      async () => (await request({})).body.code === "invalid_request",
+      "configured Edge worker",
     );
     const grant = await request(add(existing.email));
     assert.ok(
@@ -484,6 +489,70 @@ verify_jwt = true
       }),
     ).toBeVisible();
     passed("Expired native invitation link reports recovery guidance");
+    const mailContainer = execFileSync(
+      "docker",
+      ["ps", "--format", "{{.Names}}"],
+      { encoding: "utf8" },
+    )
+      .trim()
+      .split(/\r?\n/)
+      .find((name) =>
+        new RegExp(`^supabase_(mailpit|inbucket)_${project}$`).test(name),
+      );
+    assert.ok(
+      mailContainer,
+      "Could not identify this disposable stack's mail sink",
+    );
+    execFileSync("docker", ["stop", "--time", "5", mailContainer], {
+      stdio: "ignore",
+    });
+    try {
+      const failedDelivery = await request(add("smtp-failure@fixture.invalid"));
+      assert.ok(
+        !failedDelivery.body.ok &&
+          ["delivery_unknown", "recovery_required"].includes(
+            failedDelivery.body.state,
+          ),
+        "SMTP failure must not report invitation success",
+      );
+    } finally {
+      execFileSync("docker", ["start", mailContainer], { stdio: "ignore" });
+    }
+    await waitFor(async () => (await fetch(mail)).ok, "recovered mail sink");
+    const deliveryRetry = await request(add("smtp-failure@fixture.invalid"));
+    assert.ok(
+      !["invite", "sending"].includes(deliveryRetry.body.state),
+      "Retry must not re-send an uncertain invitation",
+    );
+    assert.equal((await messages("smtp-failure@fixture.invalid")).length, 0);
+    passed(
+      "Real SMTP outage, honest failure and no automatic resend after recovery",
+    );
+    const banned = await create("banned@fixture.invalid");
+    assert.ok(
+      !(
+        await service.auth.admin.updateUserById(banned.id, {
+          ban_duration: "1h",
+        })
+      ).error,
+    );
+    assert.equal(
+      (await request(add(banned.email))).body.code,
+      "account_ineligible",
+    );
+    assert.ok(
+      !(
+        await service.auth.admin.updateUserById(admin.id, {
+          ban_duration: "1h",
+        })
+      ).error,
+    );
+    assert.ok(
+      [401, 403].includes(
+        (await request(add("blocked-admin@fixture.invalid"))).status,
+      ),
+    );
+    passed("Banned target and banned Admin cannot receive or grant access");
     writeFileSync(
       path.join(root, "result.json"),
       JSON.stringify(
@@ -516,7 +585,14 @@ verify_jwt = true
     process.exitCode = 1;
   } finally {
     await browser?.close();
-    for (const child of children) child.kill("SIGTERM");
+    for (const child of children) {
+      try {
+        if (process.platform !== "win32") process.kill(-child.pid, "SIGTERM");
+        else child.kill("SIGTERM");
+      } catch {
+        /* A service that failed startup may already have exited. */
+      }
+    }
   }
 } else {
   throw Error("Use prepare or test; there is no production mode.");
