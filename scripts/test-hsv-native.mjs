@@ -70,7 +70,7 @@ major_version = 17
 enabled = false
 [studio]
 enabled = false
-[inbucket]
+[local_smtp]
 enabled = true
 port = 54324
 smtp_port = 54325
@@ -106,6 +106,16 @@ verify_jwt = true
   console.log(
     "Prepared disposable Supabase stack; no production configuration copied.",
   );
+} else if (process.argv[2] === "diagnostics") {
+  const lines = read(path.join(root, "stack.log"))
+    .split(/\r?\n/)
+    .filter(
+      (line) =>
+        /error|failed|invalid|unsupported|no longer|not found/i.test(line) &&
+        !/token|secret|password|key|authorization/i.test(line),
+    );
+  for (const line of lines.slice(-12))
+    console.log(line.replace(/[A-Za-z0-9_-]{40,}/g, "[redacted]"));
 } else if (process.argv[2] === "test") {
   const children = [];
   let browser;
