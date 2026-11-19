@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run build:e2e && node scripts/e2e-server.mjs",
-    url: "http://127.0.0.1:4173/bookclub/",
+    url: "http://127.0.0.1:4173/hsv/",
     reuseExistingServer: false,
     env: {
       VITE_SUPABASE_URL: "https://bookclub-test.invalid",

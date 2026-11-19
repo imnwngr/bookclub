@@ -19,6 +19,8 @@ dist-e2e
 dist-ssr
 *.local
 .local/
+supabase/.temp/
+supabase/.branches/
 .local/production-snapshots/
 .local/production-backups/
 .local/postgresql-tools/

@@ -1,7 +1,7 @@
 {
-  "name": "bookclub",
+  "name": "hsv-ctut",
   "private": true,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:rls": "node scripts/rls-live.mjs",
+    "test:concurrency": "node scripts/test-hsv-concurrency.mjs",
+    "check:backend": "node scripts/check-hsv-backend.mjs",
     "build:e2e": "vite build --mode e2e"
   },
   "dependencies": {

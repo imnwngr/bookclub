@@ -147,6 +147,7 @@ export async function designBackend(
     )
       body = admin;
     else if (path.endsWith("/effective_role")) body = admin ? "admin" : null;
+    else if (path.endsWith("/hsv_v3_capabilities")) body = { version: 3 };
     else if (path.endsWith("/role_directory"))
       body = [
         {
@@ -199,15 +200,13 @@ export async function designBackend(
         "heart-handshake",
       ];
     else if (path.endsWith("/event_guests"))
-      body = designGuests
-        .slice(0, 2)
-        .map((g) => ({
-          ...g,
-          id: `inv-${g.id}`,
-          guest_id: g.id,
-          event_id: current.id,
-          invitation_aliases: [{ id: `alias-${g.id}`, alias: g.primary_alias }],
-        }));
+      body = designGuests.slice(0, 2).map((g) => ({
+        ...g,
+        id: `inv-${g.id}`,
+        guest_id: g.id,
+        event_id: current.id,
+        invitation_aliases: [{ id: `alias-${g.id}`, alias: g.primary_alias }],
+      }));
     else if (path.endsWith("/resolve_invitation")) {
       const alias = request.postDataJSON().p_alias;
       const guest = designGuests.find((g) => g.primary_alias === alias);

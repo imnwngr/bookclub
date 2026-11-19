@@ -1,7 +1,7 @@
-name: Verify and deploy BookClub
+name: Verify and deploy HSV CTUT
 on:
   push:
-    branches: [main]
+    branches: [main, hsv-v3]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -44,11 +44,11 @@ jobs:
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
           VITE_GOOGLE_MAPS_MAP_ID: ${{ vars.VITE_GOOGLE_MAPS_MAP_ID }}
       - uses: actions/upload-pages-artifact@v3
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.repository == 'imnwngr/hsv' && vars.HSV_V3_PRODUCTION_READY == 'true' && github.event_name != 'pull_request'
         with:
           path: dist
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.repository == 'imnwngr/hsv' && vars.HSV_V3_PRODUCTION_READY == 'true' && github.event_name != 'pull_request'
     needs: verify
     runs-on: ubuntu-latest
     permissions:
@@ -58,6 +58,15 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Check deployed backend capability before Pages
+        run: npm run check:backend
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/configure-pages@v5
       - uses: actions/deploy-pages@v4
         id: deploy

@@ -1,12 +1,12 @@
-# BookClub CTUT v2.0.0
+# Sự kiện Hội Sinh viên CTUT · 3.0.0
 
-Ứng dụng quản lý sự kiện và thiệp mời của CLB Sinh viên Yêu thích Sách CTUT. Phiên bản frontend 2.0.0 gồm giao diện editorial, thiệp mời cá nhân hóa, chất liệu emerald/giấy và điều khiển nhạc Liquid Glass. Bản nâng cấp này giữ các tích hợp dữ liệu hiện có, không yêu cầu thay đổi database. Xem [VERIFICATION.md](VERIFICATION.md) để đối chiếu kiểm thử; hồ sơ [UPGRADE-v1.1.md](UPGRADE-v1.1.md) và các báo cáo cũ là lịch sử theo thời điểm.
+Nền tảng sự kiện Hội Sinh viên CTUT. Source 3.0.0 bổ sung Thiệp mời/Thiệp chúc, màu riêng cho từng sự kiện và luồng thêm Editor có trạng thái khôi phục. Giữ typography tiếng Việt, vật liệu giấy/dệt, opening và nhạc Liquid Glass. **Chưa phát hành production**: migration, Edge/Auth/email cần quyền quản trị Supabase và kiểm chứng sandbox trước khi đổi repository/Pages. Xem [HSV-V3-PLAN.md](HSV-V3-PLAN.md), [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md) và [HSV-V3-VERIFICATION.md](HSV-V3-VERIFICATION.md).
 
 ## Chạy local
 
 Redesign frontend ngày 11/11/2026: xem [DESIGN.md](DESIGN.md), [UI-REDESIGN-PLAN.md](UI-REDESIGN-PLAN.md), [UI-REDESIGN-VERIFICATION.md](UI-REDESIGN-VERIFICATION.md) và [INVITATION-SCROLL-FIX-VERIFICATION.md](INVITATION-SCROLL-FIX-VERIFICATION.md) để đối chiếu source, kiểm thử và giới hạn performance. Screenshots/video kiểm thử nằm trong `.local/` và không được commit. Các báo cáo nghiệm thu local và báo cáo live lịch sử không chứng nhận deployment production mới.
 
-Cần Node.js 24 và npm; dùng lockfile: `npm ci`. Tạo `.env.local` từ `.env.example`, cấu hình `VITE_SUPABASE_URL` và `VITE_SUPABASE_PUBLISHABLE_KEY` của project được phép dùng. Các biến Vite là công khai trên frontend; không đặt service_role, mật khẩu hoặc token riêng. Chạy `npm run dev`, mở `/bookclub/`. Không commit `.env.local`.
+Cần Node.js 24 và npm; dùng lockfile: `npm ci`. Tạo `.env.local` từ `.env.example`, cấu hình `VITE_SUPABASE_URL` và `VITE_SUPABASE_PUBLISHABLE_KEY` của project được phép dùng. Các biến Vite là công khai trên frontend; không đặt service_role, mật khẩu hoặc token riêng. Chạy `npm run dev`, mở `/hsv/`. Không commit `.env.local`. Chưa áp dụng migration v3 thì thao tác lưu bị chặn rõ ràng, không giả vờ lưu loại thiệp/màu.
 
 ## SQL và môi trường dữ liệu
 
@@ -16,7 +16,7 @@ Cần Node.js 24 và npm; dùng lockfile: `npm ci`. Tạo `.env.local` từ `.en
 - `supabase/migrations/202611050001_ui_refinement.sql`: refinement đã COMMIT và hậu kiểm production. Không chạy lại.
 - Các file `*preflight*`, `*postflight*`, `supabase/hotfixes/` và hồ sơ review phục vụ kiểm tra/audit. Kiểm tra nội dung và project trước khi chạy; hậu kiểm chỉ đọc không thay cho Auth/RLS live tests.
 
-Không chạy tự động chuỗi migrations cũ hoặc `supabase db push` trên production. Mọi thay đổi schema production tiếp theo cần migration riêng, review dữ liệu/quyền, backup và phê duyệt riêng; giữ Auth và dữ liệu người dùng.
+Không chạy tự động chuỗi migrations cũ hoặc `supabase db push` trên production. Hai migration ngày 20/11/2026 chỉ áp dụng sau đối chiếu schema/history, backup và thử phục hồi theo [hướng dẫn v3](HSV-V3-MIGRATION.md). Người dùng đã chấp thuận thay đổi trong phạm vi HSV 3.0.0; điều kiện an toàn và quyền kết nối vẫn phải đáp ứng.
 
 ### Project mới riêng biệt
 
@@ -32,4 +32,4 @@ Không đặt UUID tài khoản production, mật khẩu hoặc credentials vào
 
 Địa điểm hỗ trợ Google Maps URL/Place ID thủ công. Nếu dùng API key, hạn chế theo HTTP referrer, API và quota. Chạy `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:e2e`, `npm run build`; browser tests hiện dùng mocks, còn live checks được ghi riêng trong VERIFICATION.md.
 
-Vite và Router dùng `/bookclub/`; GitHub Pages fallback dùng `404.html` nên deep link có thể trả HTTP 404 ban đầu trước khi client khôi phục route. Workflow kiểm tra và deploy `dist` từ branch main; commit/push/deploy chỉ thực hiện khi được phê duyệt riêng. Sau deploy cần smoke test production và xác minh đúng commit. Không mặc định rollback sang frontend v1.0 vì có nguy cơ không tương thích schema hiện tại.
+Vite/Router dùng `/hsv/`, thiệp dùng `/thiep-moi/:code/:alias` hoặc `/thiep-chuc/:code/:alias`. GitHub Pages fallback dùng `404.html`, deep link có thể trả HTTP 404 ban đầu trước khi client khôi phục route. Workflow kiểm tra main/hsv-v3; deploy chỉ tại repo `imnwngr/hsv`, branch main, `HSV_V3_PRODUCTION_READY=true` và capability backend hợp lệ. Không bật gate khi chưa có bằng chứng production. Push nhánh triển khai không deploy Pages. Chưa rename repo; không cam kết `/bookclub/` tự chuyển hướng sau rename. Không rollback mù về v2 vì Thiệp chúc có thời gian null.
