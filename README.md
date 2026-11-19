@@ -1,6 +1,6 @@
 # Sự kiện Hội Sinh viên CTUT · 3.0.0
 
-Nền tảng sự kiện Hội Sinh viên CTUT. Source 3.0.0 bổ sung Thiệp mời/Thiệp chúc, màu riêng cho từng sự kiện và luồng thêm Editor có trạng thái khôi phục. Giữ typography tiếng Việt, vật liệu giấy/dệt, opening và nhạc Liquid Glass. **Chưa phát hành production**: migration, Edge/Auth/email cần quyền quản trị Supabase và kiểm chứng sandbox trước khi đổi repository/Pages. Xem [HSV-V3-PLAN.md](HSV-V3-PLAN.md), [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md) và [HSV-V3-VERIFICATION.md](HSV-V3-VERIFICATION.md).
+Nền tảng sự kiện Hội Sinh viên CTUT. Source 3.0.0 bổ sung Thiệp mời/Thiệp chúc, màu riêng cho từng sự kiện và luồng thêm Editor có trạng thái khôi phục. Giữ typography tiếng Việt, vật liệu giấy/dệt, opening và nhạc Liquid Glass. **Database v3 đã áp dụng; chưa phát hành frontend/Edge v3**: còn kiểm tra Auth/SMTP/secrets qua kênh quản trị bổ sung trước khi đổi repository/Pages. Xem [HSV-V3-PLAN.md](HSV-V3-PLAN.md), [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md) và [HSV-V3-VERIFICATION.md](HSV-V3-VERIFICATION.md).
 
 ## Chạy local
 
@@ -16,7 +16,7 @@ Cần Node.js 24 và npm; dùng lockfile: `npm ci`. Tạo `.env.local` từ `.en
 - `supabase/migrations/202611050001_ui_refinement.sql`: refinement đã COMMIT và hậu kiểm production. Không chạy lại.
 - Các file `*preflight*`, `*postflight*`, `supabase/hotfixes/` và hồ sơ review phục vụ kiểm tra/audit. Kiểm tra nội dung và project trước khi chạy; hậu kiểm chỉ đọc không thay cho Auth/RLS live tests.
 
-Không chạy tự động chuỗi migrations cũ hoặc `supabase db push` trên production. Hai migration ngày 20/11/2026 chỉ áp dụng sau đối chiếu schema/history, backup và thử phục hồi theo [hướng dẫn v3](HSV-V3-MIGRATION.md). Người dùng đã chấp thuận thay đổi trong phạm vi HSV 3.0.0; điều kiện an toàn và quyền kết nối vẫn phải đáp ứng.
+Không chạy tự động chuỗi migrations cũ hoặc `supabase db push` trên production. Hai migration ngày 20/11/2026 **đã áp dụng**, không replay; mapping version thực tế, backup và thử phục hồi nằm trong [hướng dẫn v3](HSV-V3-MIGRATION.md). Người dùng đã chấp thuận thay đổi trong phạm vi HSV 3.0.0; điều kiện an toàn và quyền kết nối vẫn phải đáp ứng.
 
 ### Project mới riêng biệt
 

@@ -1,8 +1,31 @@
 # HSV CTUT 3.0.0 · Nghiệm thu
 
-Ngày 20/11/2026, Asia/Bangkok. **Bản triển khai local; chưa phát hành production.** Không dùng test mock để xác nhận SMTP, Edge đang deploy hoặc RLS production. Goal chưa hoàn tất cho đến khi backend, Auth/email và rollout thật được kiểm chứng.
+Ngày 20/11/2026, Asia/Bangkok. **Database v3 đã áp dụng production; chưa phát hành frontend/Edge v3.** Không dùng test mock để xác nhận SMTP hoặc Edge đang deploy. Goal chưa hoàn tất cho đến khi Auth/email và rollout thật được kiểm chứng.
 
-## Preflight và trạng thái bên ngoài
+## Kiểm chứng sau khi kết nối Supabase
+
+Kết nối MCP đã hoạt động, project đúng `trdofhdspbkwgernwybp`, ACTIVE_HEALTHY, PostgreSQL 17.11, organization Free. Quyền đọc schema/history/RLS/Edge được thực thi; quyền migration được xác nhận bằng hai lần apply thành công, không suy từ quyền đọc hay GitHub ADMIN. Lịch sử thực tế và backup có phạm vi xem [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md).
+
+| Hạng mục | Bằng chứng hiện tại | Trạng thái |
+|---|---|---|
+| Schema/RPC/RLS/history | MCP đọc definitions và ACL; hai history mới `20261119220329`, `20261119220343` | PASS |
+| Backup phần bị ảnh hưởng | Snapshot public ngoài repo có ACL, manifest SHA-256; khôi phục 9 bảng và 26 hàm trên PostgreSQL thật; hai migration nguyên file PASS | PASS trong phạm vi public; không phải full platform restore |
+| Dữ liệu sau migration | Fingerprint 9 bảng cũ giữ nguyên; 24 hàm không liên quan giữ nguyên; cũ mặc định invitation; ledger trống và client không có quyền trực tiếp | PASS production SQL |
+| Public HTTP | 1 published event, 1 draft ẩn, 14 primary aliases/snapshots đúng; event_type/theme trả đúng; bảng riêng và recovery từ chối anonymous | PASS production read-only |
+| Edge live | Đã tải source revision 1; xác nhận action invite trả 403 “Invitations are disabled pending safety verification” | PASS xác định nguyên nhân live; chưa deploy revision mới |
+| Auth/SMTP/secrets | Plugin không có công cụ quản lý các cấu hình này; CLI AccessTokenRequiredError, Dashboard chưa đăng nhập ở lần kiểm tra | BLOCKED kênh quản trị bổ sung |
+
+Sửa thêm khả năng triển khai backend trước frontend: action grant của frontend cũ thiếu request_id nay được gán ID ổn định theo actor/email; không cho gửi thư và retry sau revoke không tự cấp lại. Luồng add v3 vẫn yêu cầu request_id từ client. Unit handler mới PASS; native sandbox bổ sung kiểm tra grant/retry/revoke của frontend cũ để CI xác minh trước deploy Edge.
+
+Typecheck/lint/build PASS sau sửa; unit tăng từ 137 lên **138 PASS**. Browser đầy đủ đã hoàn tất **167 PASS, 35 skip**, log `.local/hsv-v3/postmigration-e2e.log`. Unit/build của bản sửa tương thích lưu tại `edge-compat-unit.log` và `edge-compat-build.log`. Các bằng chứng sandbox trước đó bên dưới không thay cho kiểm tra production mới.
+
+Kiểm tra lại kết nối theo yêu cầu người dùng: `list_projects`, `list_migrations`, `list_edge_functions` và SQL read-only đều thực thi thành công. History vẫn đúng hai migration v3, Edge vẫn revision 1, không replay migration. GitHub vẫn ADMIN, remote main giữ `8ee2e3e`, repo đích `imnwngr/hsv` trả 404 và tag `v3.0.0` chưa tồn tại. CLI vẫn thiếu access token, Dashboard chuyển đến Sign in; plugin không có tool Auth config/SMTP/Edge secrets. Đây là giới hạn kênh quản trị hiện có, không phải thiếu kết nối database. Chưa mở gửi email hoặc chuyển Pages.
+
+Security advisors đã chạy trước/sau migration. Ledger có RLS và không policy là chủ đích deny-all cho client ([linter 0008](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)); quyền direct service cũng bị revoke, chỉ các RPC có guard được cấp EXECUTE. `editor_add_recovery` là SECURITY DEFINER có kiểm tra Admin và search_path cố định, đã kiểm ACL thực tế. Các cảnh báo hàm SECURITY DEFINER cũ và leaked-password protection có trước, không được âm thầm thay quyền hoặc cấu hình trong rollout này.
+
+Bằng chứng mới không chứa dữ liệu cá nhân: `.local/hsv-v3/production-postflight.json`, `production-http-smoke.json`. Backup riêng và báo cáo restore nằm ngoài repo tại `C:\dev\temp\hsv-v3-production`. Không có email production nào được gửi.
+
+## Preflight ban đầu trước khi có kết nối (lịch sử)
 
 | Hạng mục | Khả năng thực tế | Bằng chứng | PASS/BLOCKED | Cách xử lý |
 |---|---|---|---|---|
@@ -32,12 +55,13 @@ Plugin discovery xác nhận có Supabase nhưng chưa connected; không xem CLI
 | Baseline | typecheck/lint/build PASS; 120 unit; 145 e2e, 25 skip | Trước thay đổi |
 | `npm run typecheck` | PASS | TypeScript ứng dụng/tests |
 | `npm run lint` | PASS | ESLint |
-| `npm test` | 137 PASS, 28 files | Domain/API, SQL PGlite và handler Edge với mocks |
+| `npm test` | 138 PASS, 28 files | Domain/API, SQL PGlite và handler Edge với mocks |
 | `npm run test:e2e` | 167 PASS, 35 skip | Chromium desktop/mobile, API/Storage mock |
 | `npm run build` | PASS | Build production, base /hsv/ |
 | `npm run test:concurrency` | PASS | PostgreSQL 17.11 thật, loopback, hai session độc lập |
 | Native account sandbox | 10 nhóm kiểm tra PASS | Auth, JWT, Edge, PostgREST, SQL, SMTP Mailpit và Chromium thật trên runner tách biệt |
-| Production write/email | Chưa chạy | BLOCKED; không có thay đổi production |
+| Production database | Hai migration đã áp dụng; SQL và HTTP postflight PASS | Schema/RPC/ACL thực tế; dữ liệu cũ giữ nguyên |
+| Production Edge/Auth/email | Chưa rollout/kiểm chứng delivery | BLOCKED Auth/SMTP/secrets; Edge vẫn revision 1 |
 
 35 skip là các matrix chiều rộng/màu và checks riêng desktop không chạy lặp trong project mobile; không phải test thất bại được bỏ qua. Browser suite vẫn chạy các luồng desktop và mobile. SQL PGlite dựng baseline synthetic từ các file lịch sử, điều chỉnh fingerprint guard lịch sử chỉ trong helper; **hai migration v3 dùng nguyên file**, không sửa guard. Không coi schema synthetic là schema live. Test PostgreSQL hai PID khác nhau xác nhận cùng email chỉ một claim `invite`, một `processing`, một ledger row; không chạy Auth hoặc gửi email.
 
@@ -68,7 +92,7 @@ Nhóm bằng chứng:
 
 ## Quản lý tài khoản: nguyên nhân và giới hạn
 
-Source cũ có nhánh action=invite trả 403 “Invitations are disabled pending safety verification”. UI cũ buộc chọn kỹ thuật invite/grant. Đó là nguyên nhân đã xác minh ở source; **chưa đọc được Edge revision live**, không kết luận production deploy giống source. Bản mới thay bằng luồng `add` và ledger chứ không chỉ gỡ 403. `HSV_INVITATIONS_ENABLED=verified` chỉ mở sau native Auth/SMTP sandbox thành công; fixture mode không gửi email và sandbox từ chối cloud URL.
+Source cũ có nhánh action=invite trả 403 “Invitations are disabled pending safety verification”. UI cũ buộc chọn kỹ thuật invite/grant. Sau khi có MCP, **đã xác nhận Edge revision 1 live cũng có nhánh chặn này**. Bản mới thay bằng luồng `add` và ledger chứ không chỉ gỡ 403. `HSV_INVITATIONS_ENABLED=verified` chỉ mở sau native Auth/SMTP sandbox thành công và kiểm tra cấu hình live; fixture mode không gửi email và sandbox từ chối cloud URL.
 
 Auth invite và database grant không có transaction chung. Timeout/response mất giữ trạng thái chưa xác định, không tự gửi lại; khi tìm thấy tài khoản thì chỉ khôi phục quyền. Nếu chưa thấy tài khoản, operator cần đối chiếu logs trước quyết định gửi mới.
 
@@ -82,6 +106,6 @@ Repo hiện tại `imnwngr/bookclub`, branch triển khai `hsv-v3`; chưa merge 
 
 Link `/bookclub/` vẫn phục vụ bản cũ trong lần read-only kiểm tra này. Redirect repo GitHub không chứng minh Pages redirect. Sau rename, muốn giữ link cũ cần hosting bridge riêng ở `/bookclub/`; chưa tạo và chưa kiểm chứng. Không tuyên bố tương thích cũ sau rename.
 
-Thao tác tối thiểu còn cần từ người dùng: kết nối Supabase project `trdofhdspbkwgernwybp` bằng plugin đã đề xuất hoặc login CLI bằng tài khoản có quyền quản trị phù hợp; không gửi token trong chat. Không còn cần người dùng sửa Docker để chạy QA email vì runner đã cung cấp môi trường đó. Sau khi kết nối, Codex kiểm tra quyền thực tế, backup/restore, schema/history/Edge/config, thử với schema tương ứng, áp dụng backend, cập nhật Auth redirects và mới phối hợp rename/deploy/tag/smoke. Không cần duyệt lại các thay đổi đã được chấp thuận trong nhiệm vụ.
+Plugin đã kết nối và database v3 đã áp dụng. Điều kiện bên ngoài còn thiếu: phiên CLI hoặc Dashboard có quyền quản trị để đọc/sửa Auth redirects, SMTP và Edge secrets mà plugin hiện không cung cấp. Câu hỏi bất đồng bộ đã gửi; không yêu cầu token trong chat và không xin duyệt lại scope. Không còn cần sửa Docker để chạy QA email vì runner đã cung cấp sandbox. Sau khi kiểm tra cấu hình, tiếp tục Edge, Auth redirects và phối hợp rename/deploy/tag/smoke.
 
 Không dùng external AI worker. Không thay bucket/env names/migrations lịch sử hoặc dữ liệu production. Các file untracked có trước được giữ nguyên và không đưa vào commits của phiên.

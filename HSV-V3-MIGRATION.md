@@ -1,10 +1,27 @@
 # HSV 3.0.0: migration và chuyển đổi
 
-**Production chưa được thay đổi.** Hai migration mới đã được thử local; chưa có bằng chứng schema, migration history, backup/restore và Edge revision hiện tại qua kết nối quản trị. REST công khai xác nhận project `trdofhdspbkwgernwybp` chưa có cột v3. CLI 3.2.0 lấy từ package chính thức `supabase` (repository github.com/supabase/cli) chạy được nhưng chưa được đăng nhập. Docker máy cá nhân chưa dùng được; native Auth/Edge/SMTP sandbox đã PASS trên GitHub runner tách biệt, xem HSV-V3-VERIFICATION.md. Không đưa password/token vào chat hoặc repository.
+**Hai migration database đã áp dụng production ngày 20/11/2026; Edge/Auth/frontend chưa rollout.** Kết nối MCP xác nhận project `trdofhdspbkwgernwybp`, PostgreSQL 17.11, trạng thái ACTIVE_HEALTHY. Đã đọc schema, ACL/RLS, lịch sử và Edge revision 1, lấy snapshot phần bị ảnh hưởng, khôi phục trên PostgreSQL local và chạy hai file migration nguyên bản trước khi áp dụng. Chi tiết và giới hạn backup ở dưới. CLI 3.2.0 chính thức vẫn chưa đăng nhập; plugin hiện không có công cụ đọc/sửa Auth config, SMTP, Edge secrets hoặc quản lý backup nền tảng. Không đưa password/token vào chat hoặc repository.
+
+## Trạng thái đã áp dụng
+
+| File source | Version trong history production | Kết quả |
+|---|---|---|
+| `202611200001_event_types_theme.sql` | `20261119220329` / `hsv_v3_event_types_theme` | PASS, UTC 2026-11-19 22:03 |
+| `202611200002_editor_add_operations.sql` | `20261119220343` / `hsv_v3_editor_add_operations` | PASS, UTC 2026-11-19 22:03 |
+
+MCP tạo timestamp history thực tế khác tên file local; **không chạy lại hai file**. Bốn migration history có trước đã được đối chiếu với definitions, không suy luận từ tên file. Fingerprint cả 9 bảng cũ giữ nguyên sau khi bỏ hai thuộc tính mới khỏi phép so sánh `events`; 24 hàm không liên quan giữ nguyên. `hsv_v3_capabilities()` trả đủ hai loại, theme v1 và editor ledger. Ledger trống, có RLS, client không có SELECT/INSERT hoặc EXECUTE begin/finish; service_role có EXECUTE.
+
+## Backup có phạm vi và thử phục hồi
+
+Snapshot được đọc trong một SQL statement nhất quán, lưu tại `C:\dev\temp\hsv-v3-production` ngoài repository, ACL chỉ Windows user hiện tại và SYSTEM. Bao gồm 9 bảng `public`, columns/defaults/constraints/indexes/triggers/policies/grants, 26 functions, history, storage policy definitions và Edge source revision 1. Chỉ lưu Auth UUID cần cho FK, **không** lưu mật khẩu, token, email Auth hoặc session. Snapshot không gồm Storage bytes, toàn bộ Auth, managed-service configuration, roles toàn cluster hoặc backup/PITR của Supabase Free.
+
+`node scripts/verify-hsv-production-snapshot.mjs` kiểm SHA-256 manifest, khôi phục schema/rows trong PostgreSQL 17.11 loopback dùng mật khẩu ngẫu nhiên, đối chiếu toàn bộ rows và definitions, chạy hai migration nguyên bản, kiểm null Thiệp chúc/validation Thiệp mời/draft resolver/ACL, rồi dừng cluster. Lần PASS có bằng chứng tại `C:\dev\temp\hsv-v3-production\restore-2026-11-19T22-02-15-763Z\result.json`. Đây là phục hồi phần `public` cần cho các migration tương thích, không phải diễn tập khôi phục cả Supabase/Auth/Storage. Không upload snapshot lên CI hoặc đưa vào git.
+
+Containment của thay đổi đã áp dụng: giữ cột và ledger mới, giữ dữ liệu phát sinh; không rollback mù về schema v2 hoặc restore snapshot lên production. Edge vẫn revision 1 và Pages vẫn v2 khi ghi nhận mốc này, nên chưa có thao tác thêm tài khoản qua mã v3. Cấu hình Auth/SMTP/Edge secrets phải được kiểm tra qua CLI hoặc Dashboard đã xác thực trước khi mở lời mời thật.
 
 ## Trước khi ghi production
 
-1. Kết nối Supabase được cấp quyền phù hợp cho đúng project. Đọc schema/definitions/ACL/RLS và lịch sử migration bằng management API; chạy `supabase/hsv-v3-preflight.sql` read-only. So sánh definitions với source và guard, lưu bản kết quả trong `.local/hsv-v3/production/` với quyền truy cập hạn chế. Đọc được public API không chứng minh quyền ghi.
+1. Kết nối Supabase được cấp quyền phù hợp cho đúng project. Đọc schema/definitions/ACL/RLS và lịch sử migration bằng management API; chạy `supabase/hsv-v3-preflight.sql` read-only (nếu công cụ chỉ trả result cuối, dùng một JSON result tổng hợp). So sánh definitions với source và guard, lưu phần chứa dữ liệu tại thư mục ACL bảo vệ ngoài repository. Đọc được public API không chứng minh quyền ghi.
 2. Xác minh backup mới nhất hoặc PITR window, phạm vi (database, Auth, Storage bytes, cấu hình managed services), operator có quyền restore, nơi khôi phục tách biệt, thời gian phục hồi và mất dữ liệu tối đa. Thử restore phù hợp; logical dump không tự chứng minh Auth/Storage/SMTP đã hoạt động. Các file backup có sẵn không được coi là hợp lệ chỉ vì tồn tại.
 3. Đọc deployment/revision/source của `manage-editors`, JWT verification, tên secrets (không xuất giá trị), Auth Site URL/redirect allowlist, SMTP/provider và lỗi delivery. Kiểm tra các tài khoản fixture thuộc sandbox/mail sink; không thử email production.
 4. So sánh bản schema tách biệt với production. Migration mới dùng guard cấu trúc/security, transaction, lock_timeout 5s và từ chối replay/partial state. Không thay guard chỉ để chạy cho qua. Nếu schema lệch, dừng apply và viết migration thích hợp sau audit.
