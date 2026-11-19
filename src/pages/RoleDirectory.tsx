@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { db, errorMessage } from "../lib/supabase";
 import { ErrorState, Loading } from "../components/Feedback";
 import { Confirm } from "../components/Confirm";
+import { accountMessages, accountResultMessage } from "../lib/editorAccounts";
 interface Account {
   user_id: string;
   email: string;
@@ -15,9 +16,14 @@ export default function RoleDirectory() {
     [filter, setFilter] = useState(""),
     [dialog, setDialog] = useState(false),
     [email, setEmail] = useState(""),
-    [action, setAction] = useState("invite"),
     [busy, setBusy] = useState(false),
     [target, setTarget] = useState<Account | null>(null);
+  const [feedback, setFeedback] = useState<{
+    text: string;
+    success: boolean;
+  } | null>(null);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const inFlight = useRef(false);
   const modal = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = modal.current;
@@ -45,30 +51,73 @@ export default function RoleDirectory() {
       return r.data as string | null;
     },
   });
-  async function mutate(body: object) {
-    if (busy) return;
+  const recovery = useQuery({
+    queryKey: ["editor-add-recovery"],
+    enabled: role.data === "admin",
+    queryFn: async () => {
+      const r = await db().rpc("editor_add_recovery");
+      if (r.error) throw r.error;
+      return r.data as { email: string; state: string; updated_at: string }[];
+    },
+  });
+  function openAdd(value = "") {
+    setEmail(value);
+    setFeedback(null);
+    setRequestId(crypto.randomUUID());
+    setDialog(true);
+  }
+  async function mutate(body: {
+    action: string;
+    email?: string;
+    user_id?: string;
+    request_id?: string;
+  }) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
+    setFeedback(null);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 35000);
     try {
       const r = await db().functions.invoke("manage-editors", {
         body: { ...body, role: "editor" },
+        signal: controller.signal,
       });
       if (r.error) {
-        let message = errorMessage(r.error);
+        let message = accountMessages.outcome_unknown;
         if (r.error.context instanceof Response) {
           const detail = await r.error.context.json().catch(() => null);
-          if (detail?.error) message = detail.error;
+          message =
+            accountMessages[detail?.code] ??
+            "Không thể hoàn tất. Kiểm tra trạng thái tài khoản trước khi thử lại.";
         }
         throw Error(message);
       }
       if (!r.data?.ok)
-        throw Error(r.data?.error ?? "Không thể cập nhật vai trò");
-      toast.success("Đã cập nhật vai trò");
-      setDialog(false);
+        throw Error(
+          accountMessages[r.data?.code] ??
+            "Chưa xác nhận được kết quả cập nhật quyền.",
+        );
+      if (body.action === "add")
+        setFeedback({
+          text: accountResultMessage(r.data.state, r.data.account_status),
+          success: true,
+        });
+      else {
+        toast.success("Đã thu hồi quyền Editor");
+        setDialog(false);
+      }
       setTarget(null);
-      await directory.refetch();
     } catch (e) {
-      toast.error(errorMessage(e));
+      const text = controller.signal.aborted
+        ? accountMessages.outcome_unknown
+        : errorMessage(e);
+      if (body.action === "add") setFeedback({ text, success: false });
+      else toast.error(text);
     } finally {
+      window.clearTimeout(timer);
+      await Promise.allSettled([directory.refetch(), recovery.refetch()]);
+      inFlight.current = false;
       setBusy(false);
     }
   }
@@ -88,13 +137,11 @@ export default function RoleDirectory() {
           <p className="section-label">Tài khoản & quyền truy cập</p>
           <h1>Quản lý vai trò</h1>
         </div>
-        {admin && (
-          <button onClick={() => setDialog(true)}>Thêm tài khoản</button>
-        )}
+        {admin && <button onClick={() => openAdd()}>Thêm tài khoản</button>}
       </div>
       <div className="role-summary">
-        Admin quản lý tài khoản và nội dung. Editor quản lý sự kiện, thiệp mời
-        và danh bạ khách mời.
+        Admin quản lý tài khoản và nội dung. Editor quản lý sự kiện, thiệp và
+        danh bạ khách mời.
       </div>
       <div className="toolbar">
         <label>
@@ -130,7 +177,7 @@ export default function RoleDirectory() {
                   </span>{" "}
                   ·{" "}
                   {r.status === "invited"
-                    ? "Đã mời"
+                    ? "Chờ nhận lời mời"
                     : r.status === "confirmed"
                       ? "Đã xác nhận"
                       : "Chưa xác nhận"}
@@ -147,6 +194,45 @@ export default function RoleDirectory() {
           <p>Không có tài khoản phù hợp.</p>
         )}
       </div>
+      {admin && (
+        <section aria-label="Yêu cầu cần kiểm tra" className="role-recovery">
+          {recovery.error && (
+            <p role="alert">
+              Không tải được trạng thái khôi phục. Chưa thể xác nhận các yêu cầu
+              trước đó.{" "}
+              <button
+                className="secondary"
+                onClick={() => void recovery.refetch()}
+              >
+                Tải lại trạng thái
+              </button>
+            </p>
+          )}
+          {!!recovery.data?.length && (
+            <>
+              <h2>Yêu cầu cần kiểm tra</h2>
+              {recovery.data.map((item) => (
+                <div className="panel role-row" key={item.email}>
+                  <div>
+                    <strong>{item.email}</strong>
+                    <p>
+                      {item.state === "sending" || item.state === "granting"
+                        ? "Đang xử lý hoặc chưa nhận được kết quả"
+                        : "Cần khôi phục"}
+                    </p>
+                  </div>
+                  <button
+                    className="secondary"
+                    onClick={() => openAdd(item.email)}
+                  >
+                    Kiểm tra và khôi phục
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
+        </section>
+      )}
       {dialog && (
         <dialog
           ref={modal}
@@ -160,18 +246,33 @@ export default function RoleDirectory() {
             className="panel"
             onSubmit={(e) => {
               e.preventDefault();
-              void mutate({ action, email });
+              void mutate({
+                action: "add",
+                email: email.trim(),
+                request_id: requestId,
+              });
             }}
           >
             <h2>Thêm tài khoản</h2>
+            <p>
+              Tài khoản đã có sẽ được cấp quyền Editor. Email mới sẽ nhận lời
+              mời để hoàn tất tài khoản. Hệ thống tự kiểm tra, không gửi lại
+              email khi thử khôi phục.
+            </p>
             <label>
               Email
               <input
                 type="email"
                 required
                 maxLength={254}
+                autoComplete="email"
+                disabled={busy}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setFeedback(null);
+                  setRequestId(crypto.randomUUID());
+                }}
               />
             </label>
             <label>
@@ -180,19 +281,23 @@ export default function RoleDirectory() {
                 <option value="editor">Editor</option>
               </select>
             </label>
-            <label>
-              Thao tác
-              <select
-                value={action}
-                onChange={(e) => setAction(e.target.value)}
-              >
-                <option value="invite">Mời tài khoản mới</option>
-                <option value="grant">Cấp quyền cho tài khoản có sẵn</option>
-              </select>
-            </label>
+            <div role="status" aria-live="polite">
+              {busy && <p>Đang kiểm tra tài khoản và xử lý quyền…</p>}
+              {feedback && (
+                <p
+                  className={`role-feedback ${feedback.success ? "" : "error"}`}
+                >
+                  {feedback.text}
+                </p>
+              )}
+            </div>
             <div className="actions">
-              <button disabled={busy}>
-                {busy ? "Đang xử lý…" : "Xác nhận"}
+              <button disabled={busy || feedback?.success === true}>
+                {busy
+                  ? "Đang xử lý…"
+                  : feedback
+                    ? "Kiểm tra và khôi phục"
+                    : "Thêm Editor"}
               </button>
               <button
                 type="button"
@@ -200,7 +305,7 @@ export default function RoleDirectory() {
                 disabled={busy}
                 onClick={() => setDialog(false)}
               >
-                Hủy
+                {feedback?.success ? "Đóng" : "Hủy"}
               </button>
             </div>
           </form>

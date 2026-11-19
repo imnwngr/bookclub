@@ -1,6 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Capture an Auth redirect failure before the client consumes and clears its fragment.
+export const authRedirectFailed =
+  typeof window !== "undefined" &&
+  (new URLSearchParams(window.location.hash.slice(1)).has("error") ||
+    new URLSearchParams(window.location.search).has("error"));
 export const configured = Boolean(url && key);
 export const supabase = configured ? createClient(url, key) : null;
 export function db() {
@@ -11,6 +16,18 @@ export function db() {
   return supabase;
 }
 export function errorMessage(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : error && typeof error === "object" && "message" in error
+        ? String(error.message)
+        : "";
+  if (
+    /failed to fetch|networkerror|network request failed|load failed/i.test(
+      message,
+    )
+  )
+    return "Không thể kết nối dữ liệu. Kiểm tra kết nối mạng rồi thử lại.";
   if (error && typeof error === "object" && "code" in error) {
     const code = String(error.code);
     if (code === "PGRST202")
