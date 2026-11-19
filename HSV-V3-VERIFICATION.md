@@ -33,7 +33,7 @@ Plugin discovery xác nhận có Supabase nhưng chưa connected; không xem CLI
 | `npm run typecheck` | PASS | TypeScript ứng dụng/tests |
 | `npm run lint` | PASS | ESLint |
 | `npm test` | 137 PASS, 28 files | Domain/API, SQL PGlite và handler Edge với mocks |
-| `npm run test:e2e` | 165 PASS, 35 skip | Chromium desktop/mobile, API/Storage mock |
+| `npm run test:e2e` | 167 PASS, 35 skip | Chromium desktop/mobile, API/Storage mock |
 | `npm run build` | PASS | Build production, base /hsv/ |
 | `npm run test:concurrency` | PASS | PostgreSQL 17.11 thật, loopback, hai session độc lập |
 | Production write/email | Chưa chạy | BLOCKED; không có thay đổi production |
@@ -46,7 +46,7 @@ Coverage: bảo toàn event/snapshot/alias khi migration; transaction rollback v
 
 Ảnh/log ở `.local/hsv-v3/` (ignored). Matrix 320/390/430/768/1024/1440/1920px cho home, cover/nội dung Thiệp chúc và editor. Ba màu #174b78/#173f36/#873c42 cho cover/nội dung Thiệp mời. Dialog tài khoản default/loading/error/pending success ở desktop/mobile. Axe WCAG2A/AA PASS trong matrix editor, ba theme và dialog. Đây không phải chứng nhận screen reader hay thiết bị iOS thật.
 
-Quan sát ảnh phát hiện và sửa chữ “Chúc” tràn cột mobile và nhãn CTUT quá nhỏ ở footer; kiểm tra glyph bounds bổ sung. Bề mặt vẫn có thớ dệt/giấy và ánh sáng; tên người nhận rõ; Thiệp chúc không có section rỗng của lịch/địa điểm. Các chapter giữ normal flow, reveal ở thành phần bên trong. Controls dùng native semantics, keyboard/focus và các trạng thái có phản hồi. Không thêm artwork/logo tổ chức tự vẽ, testimonial, số liệu giả hoặc framework thiết kế mới.
+Quan sát ảnh phát hiện và sửa chữ “Chúc” tràn cột mobile và nhãn CTUT quá nhỏ ở footer; kiểm tra glyph bounds bổ sung. Sửa thêm lỗi validation bị ẩn khi nhập địa điểm sai rồi đổi sang Thiệp chúc: thông báo rõ và nút quay lại sửa, không tự xóa dữ liệu; test desktop/mobile xác nhận có thể sửa và lưu thiệp không thời gian/địa điểm. Bề mặt vẫn có thớ dệt/giấy và ánh sáng; tên người nhận rõ; Thiệp chúc không có section rỗng của lịch/địa điểm. Các chapter giữ normal flow, reveal ở thành phần bên trong. Controls dùng native semantics, keyboard/focus và các trạng thái có phản hồi. Không thêm artwork/logo tổ chức tự vẽ, testimonial, số liệu giả hoặc framework thiết kế mới.
 
 Nhóm bằng chứng:
 

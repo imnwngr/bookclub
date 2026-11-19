@@ -325,3 +325,43 @@ test("v3 expired and used Auth links show recovery even with an existing session
     await expect(page.getByLabel("Mật khẩu mới")).toHaveCount(0);
   }
 });
+
+test("v3 hidden invalid location remains recoverable when switching to congratulations (mock API)", async ({
+  page,
+}) => {
+  const { writes } = await designBackend(page, { admin: true });
+  await page.goto("/hsv/admin/new");
+  await page
+    .getByLabel("Tên sự kiện *", { exact: true })
+    .fill("Thiệp chúc kiểm thử dữ liệu đang giữ");
+  await page
+    .getByLabel("Google Maps URL *", { exact: true })
+    .fill("invalid-map");
+  await page.getByRole("radio", { name: "Thiệp chúc" }).check();
+  await page.getByRole("button", { name: "Lưu sự kiện", exact: true }).click();
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Dữ liệu địa điểm đang giữ chưa hợp lệ" }),
+  ).toBeVisible();
+  expect(writes.filter((w) => w.path.endsWith("save_event"))).toHaveLength(0);
+  await page.getByRole("button", { name: "Quay lại sửa địa điểm" }).click();
+  await expect(
+    page.getByLabel("Google Maps URL *", { exact: true }),
+  ).toHaveValue("invalid-map");
+  await page.getByLabel("Google Maps URL *", { exact: true }).fill("");
+  await page.getByRole("radio", { name: "Thiệp chúc" }).check();
+  await page.getByRole("button", { name: "Lưu sự kiện", exact: true }).click();
+  await expect(page.getByText("Đã lưu sự kiện", { exact: true })).toBeVisible();
+  const payload = (
+    writes.find((w) => w.path.endsWith("save_event"))?.body as {
+      p_event: ClubEvent;
+    }
+  ).p_event;
+  expect(payload).toMatchObject({
+    event_type: "congratulation",
+    starts_at: null,
+    ends_at: null,
+    maps_url: "",
+  });
+});

@@ -158,6 +158,17 @@ function EventEditor({
   );
   const location = watch("location_method");
   const congratulation = watch("event_type") === "congratulation";
+  const retainedLocationInvalid = (
+    [
+      "venue_name",
+      "address",
+      "directions",
+      "place_id",
+      "maps_url",
+      "latitude",
+      "longitude",
+    ] as const
+  ).some((key) => Boolean(errors[key]));
   const url = mapLink(watch());
   return (
     <section className="editor" inert={saving}>
@@ -287,7 +298,9 @@ function EventEditor({
                 >
                   <input
                     type="radio"
-                    {...register("event_type")}
+                    {...register("event_type", {
+                      onChange: () => void form.trigger(),
+                    })}
                     value={type}
                   />
                   <span>
@@ -309,6 +322,22 @@ function EventEditor({
                 xuất hiện trên Thiệp chúc. Chọn lại Thiệp mời để tiếp tục chỉnh
                 sửa.
               </p>
+            )}
+            {congratulation && retainedLocationInvalid && (
+              <div className="notice" role="alert">
+                <p>
+                  Dữ liệu địa điểm đang giữ chưa hợp lệ. Thiệp chúc không yêu
+                  cầu địa điểm; hãy sửa hoặc xóa phần đã nhập rồi chọn lại Thiệp
+                  chúc.
+                </p>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => change("event_type", "invitation")}
+                >
+                  Quay lại sửa địa điểm
+                </button>
+              </div>
             )}
           </fieldset>
           <label>
