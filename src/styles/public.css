@@ -38,13 +38,13 @@
   font: inherit;
   letter-spacing: inherit;
 }
-.bookclub-logo {
+.organization-logo {
   display: block;
   flex-shrink: 0;
   width: 64px;
   aspect-ratio: 1;
 }
-.bookclub-logo img {
+.organization-logo img {
   display: block;
   width: 100%;
   height: 100%;

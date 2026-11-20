@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { listEvents } from "../features/events/api";
 import {
   eventStatus,
+  eventPath,
+  eventListDate,
   eventYear,
   filterEvents,
   formatDate,
@@ -29,31 +31,33 @@ export default function Home() {
     (event) => event.status === "published",
   );
   const filtered = orderEvents(filterEvents(events, month, year), now);
-  const years = [...new Set(events.map((e) => eventYear(e.starts_at)))]
+  const years = [...new Set(events.map((e) => eventYear(eventListDate(e))))]
     .sort()
     .reverse();
   return (
     <>
       <section className="editorial-hero">
         <div className="hero-copy">
-          <p className="section-label">Câu lạc bộ Sinh viên Yêu thích Sách</p>
+          <p className="section-label">Sự kiện Hội Sinh viên CTUT</p>
           <h1>
-            Hẹn nhau
+            Cùng nhau
             <br />
-            <span>giữa những</span>
+            <span>tạo nên</span>
             <br />
-            trang sách.
+            dấu ấn.
           </h1>
           <p className="hero-description">
-            Những cuộc gặp gỡ, câu chuyện và hoạt động của BookClub tại CTUT.
+            Nền tảng sự kiện của Hội Sinh viên Trường Đại học Kỹ thuật – Công
+            nghệ Cần Thơ. Theo dõi hoạt động và lưu giữ những khoảnh khắc đáng
+            nhớ.
           </p>
           <a className="button hero-cta" href="#events-title">
-            Xem lịch sự kiện <ArrowDown size={18} aria-hidden="true" />
+            Xem sự kiện <ArrowDown size={18} aria-hidden="true" />
           </a>
         </div>
         <PaperArt />
         <div className="hero-colophon">
-          <span>Đọc sách. Gặp gỡ. Sẻ chia.</span>
+          <span>Kết nối sinh viên. Cùng nhau trưởng thành.</span>
           <a href="#events-title" aria-label="Cuộn đến danh sách sự kiện">
             <ArrowDown size={18} />
           </a>
@@ -62,9 +66,9 @@ export default function Home() {
       <section className="listing" aria-labelledby="events-title">
         <div className="section-head">
           <div>
-            <p className="section-label">Lịch hẹn BookClub</p>
+            <p className="section-label">Hoạt động & dấu ấn</p>
             <h2 id="events-title" tabIndex={-1}>
-              Sự kiện & gặp gỡ
+              Sự kiện
             </h2>
           </div>
           <EventFilters
@@ -81,6 +85,9 @@ export default function Home() {
             years={years}
           />
         </div>
+        <p className="field-hint">
+          Bộ lọc dùng ngày diễn ra với Thiệp mời, ngày tạo với Thiệp chúc.
+        </p>
         {!query.isPending && !query.error && (
           <p className="result-count" role="status">
             {filtered.length} sự kiện
@@ -104,36 +111,57 @@ export default function Home() {
                   key={e.id}
                   className={`event-row ${eventStatus(e, now) !== "ended" && i === 0 ? "featured" : ""}`}
                 >
-                  <div className="date-block">
-                    <strong>
-                      {new Intl.DateTimeFormat("vi", {
-                        timeZone: "Asia/Ho_Chi_Minh",
-                        day: "2-digit",
-                      }).format(new Date(e.starts_at))}
-                    </strong>
-                    <span>
-                      {new Intl.DateTimeFormat("vi", {
-                        timeZone: "Asia/Ho_Chi_Minh",
-                        month: "long",
-                        year: "numeric",
-                      }).format(new Date(e.starts_at))}
-                    </span>
+                  <div
+                    className={`date-block${e.event_type === "congratulation" ? " congratulation-mark" : ""}`}
+                  >
+                    {e.event_type === "congratulation" ? (
+                      <>
+                        <strong>Chúc</strong>
+                        <span>mừng</span>
+                      </>
+                    ) : (
+                      <>
+                        <strong>
+                          {new Intl.DateTimeFormat("vi", {
+                            timeZone: "Asia/Ho_Chi_Minh",
+                            day: "2-digit",
+                          }).format(new Date(eventListDate(e)))}
+                        </strong>
+                        <span>
+                          {new Intl.DateTimeFormat("vi", {
+                            timeZone: "Asia/Ho_Chi_Minh",
+                            month: "long",
+                            year: "numeric",
+                          }).format(new Date(eventListDate(e)))}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div>
                     <span className={`status ${eventStatus(e, now)}`}>
                       {statusLabels[eventStatus(e, now)]}
                     </span>
                     <h3 className="event-title">
-                      <Link to={`/${e.code}`}>{e.title}</Link>
+                      <Link to={eventPath(e.code, e.event_type)}>
+                        {e.title}
+                      </Link>
                     </h3>
-                    <p>{formatDate(e.starts_at)}</p>
                     <p>
-                      {e.venue_name ||
-                        e.address ||
-                        "Địa điểm sẽ được thông báo"}
+                      {e.event_type === "congratulation" ? "Ngày tạo: " : ""}
+                      {formatDate(eventListDate(e))}
                     </p>
+                    {e.event_type !== "congratulation" && (
+                      <p>
+                        {e.venue_name ||
+                          e.address ||
+                          "Địa điểm sẽ được thông báo"}
+                      </p>
+                    )}
                   </div>
-                  <Link className="text-link" to={`/${e.code}`}>
+                  <Link
+                    className="text-link"
+                    to={eventPath(e.code, e.event_type)}
+                  >
                     Xem chi tiết<span className="sr-only"> {e.title}</span>
                     <ArrowUpRight size={20} aria-hidden="true" />
                   </Link>

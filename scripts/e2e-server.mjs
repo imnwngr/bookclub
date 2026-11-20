@@ -12,7 +12,7 @@ const types = {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   let filename =
-    decodeURIComponent(url.pathname).replace(/^\/bookclub\/?/, "") ||
+    decodeURIComponent(url.pathname).replace(/^\/hsv\/?/, "") ||
     "index.html";
   if (filename.endsWith("/")) filename += "index.html";
   const target = path.resolve(root, filename);
@@ -33,7 +33,7 @@ const server = createServer(async (req, res) => {
 });
 server.listen(4173, "127.0.0.1", () =>
   console.log(
-    "GitHub Pages-style local server http://127.0.0.1:4173/bookclub/",
+    "GitHub Pages-style local server http://127.0.0.1:4173/hsv/",
   ),
 );
 process.on("SIGTERM", () => server.close());

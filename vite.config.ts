@@ -16,7 +16,7 @@ const invitationWarmup: Plugin = {
         tag: "script",
         attrs: {
           type: "module", async: true, crossorigin: true,
-          src: entry ? `/bookclub/${entry.fileName}` : "/bookclub/src/preloadInvitation.ts",
+          src: entry ? `/hsv/${entry.fileName}` : "/hsv/src/preloadInvitation.ts",
         },
         injectTo: "head",
       }];
@@ -26,7 +26,7 @@ const invitationWarmup: Plugin = {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/bookclub/",
+  base: "/hsv/",
   plugins: [react(), tailwindcss(), invitationWarmup],
   // Manual QA builds must use the same isolated backend as Playwright.
   define:

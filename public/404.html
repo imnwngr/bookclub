@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>BookClub CTUT | Đang mở trang</title>
+    <title>Sự kiện Hội Sinh viên CTUT | Đang mở trang</title>
     <script>
-      if (location.pathname.startsWith("/bookclub/"))
+      if (location.pathname.startsWith("/hsv/"))
         location.replace(
-          "/bookclub/?__spa=" +
+          "/hsv/?__spa=" +
             encodeURIComponent(
               location.pathname + location.search + location.hash,
             ),
@@ -15,6 +15,6 @@
     </script>
   </head>
   <body>
-    <p>Đang mở trang BookClub… <a href="/bookclub/">Về trang chủ</a></p>
+    <p>Đang mở trang sự kiện… <a href="/hsv/">Về trang chủ</a></p>
   </body>
 </html>

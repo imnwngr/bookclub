@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams } from "react-router-dom";
+import { eventPath, typeLabel } from "../lib/domain";
+import { themeStyle } from "../lib/eventTheme";
+import { useEventTheme } from "../hooks/useEventTheme";
 import { ArrowDown, ArrowUpRight, MailOpen } from "lucide-react";
 import { resolveInvitation } from "../features/events/api";
 import {
@@ -18,7 +21,7 @@ import { Agenda } from "../components/Agenda";
 import { InvitationLogos } from "../components/InvitationLogos";
 import { useInvitationMotion } from "../hooks/useInvitationMotion";
 import { useChapterScroll } from "../hooks/useChapterScroll";
-import { BookClubLogo } from "../components/BookClubLogo";
+import { HsvLogo } from "../components/HsvLogo";
 import { InvitationChapter } from "../components/InvitationChapter";
 import type { ClubEvent, Invitation } from "../types/domain";
 import "../styles/materials.css";
@@ -26,10 +29,12 @@ import "../styles/chapters.css";
 
 export default function InvitationPage() {
   const { eventCode = "", guestAlias = "" } = useParams();
+  const location = useLocation();
   const query = useQuery({
     queryKey: ["invitation", eventCode, guestAlias],
     queryFn: () => resolveInvitation(eventCode, guestAlias),
   });
+  useEventTheme(query.data?.event.theme, !!query.data);
   if (query.isPending) return <Loading />;
   if (query.error)
     return (
@@ -41,6 +46,15 @@ export default function InvitationPage() {
         Thiệp không tồn tại hoặc sự kiện chưa được công bố.{" "}
         <Link to="/">Về trang chủ</Link>
       </Empty>
+    );
+  const canonical = eventPath(
+    eventCode,
+    query.data.event.event_type,
+    guestAlias,
+  );
+  if (location.pathname.replace(/\/$/, "") !== canonical)
+    return (
+      <Navigate replace to={canonical + location.search + location.hash} />
     );
   return (
     <InvitationExperience key={`${eventCode}/${guestAlias}`} {...query.data} />
@@ -55,6 +69,10 @@ function InvitationExperience({
   invitation: Invitation;
 }) {
   const [opened, setOpened] = useState(false);
+  const congratulation = event.event_type === "congratulation";
+  const greeting = congratulation
+    ? "Trân trọng chúc mừng"
+    : "Trân trọng kính mời";
   const [opening, setOpening] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const audio = useRef<BackgroundAudioHandle>(null);
@@ -74,36 +92,39 @@ function InvitationExperience({
     setOpened(true);
   }
   return (
-    <article className={`invitation ${opened ? "opened" : "sealed"}`}>
+    <article
+      className={`invitation ${opened ? "opened" : "sealed"}`}
+      style={themeStyle(event.theme)}
+    >
       {!opened ? (
         <div className="invitation-cover">
           <div className="cover-topline">
-            <span>BookClub CTUT</span>
-            <span>Thư mời</span>
+            <span>Sự kiện Hội Sinh viên CTUT</span>
+            <span>{typeLabel(event.event_type)}</span>
           </div>
           <div className="envelope-stack">
             <div className="envelope-paper">
               <InvitationLogos />
-              <p className="invitation-tagline section-label">
-                Trân trọng kính mời
-              </p>
+              <p className="invitation-tagline section-label">{greeting}</p>
               <p className="cover-recipient">
                 <span>{invitation.salutation}</span>
                 <strong>{invitation.name}</strong>
               </p>
               <GuestDescription value={invitation.description} />
               <div className="letter-seal" aria-hidden="true">
-                <BookClubLogo decorative />
+                <HsvLogo decorative />
               </div>
               <button className="open-invitation" onClick={open}>
                 <MailOpen size={19} aria-hidden="true" />
-                Mở thiệp mời
+                {congratulation ? "Mở thiệp chúc" : "Mở thiệp mời"}
               </button>
             </div>
             <div className="envelope-flap" aria-hidden="true" />
           </div>
           <p className="cover-postscript">
-            Một lời mời, dành riêng cho{" "}
+            {congratulation
+              ? "Một lời chúc, dành riêng cho "
+              : "Một lời mời, dành riêng cho "}
             {invitation.kind === "group" ? "các bạn" : "quý vị"}.
           </p>
         </div>
@@ -124,7 +145,9 @@ function InvitationExperience({
                 tabIndex={-1}
               >
                 <InvitationLogos />
-                <p className="section-label">Thư mời tham dự</p>
+                <p className="section-label">
+                  {congratulation ? "Trân trọng chúc mừng" : "Thư mời tham dự"}
+                </p>
                 <p className="greeting-salutation">
                   Kính gửi {invitation.salutation}
                 </p>
@@ -134,7 +157,10 @@ function InvitationExperience({
                 <GuestDescription value={invitation.description} />
                 <div className="invitation-rule" aria-hidden="true" />
                 <a className="section-next" href="#invitation-event">
-                  Lời mời từ BookClub <ArrowDown size={18} aria-hidden="true" />
+                  {congratulation
+                    ? "Lời chúc dành cho bạn"
+                    : "Lời mời từ Ban tổ chức"}{" "}
+                  <ArrowDown size={18} aria-hidden="true" />
                 </a>
               </section>
             </InvitationChapter>
@@ -145,9 +171,9 @@ function InvitationExperience({
                 tabIndex={-1}
               >
                 <p className="greeting-message">
-                  {invitation.kind === "group"
-                    ? "BookClub thân mời các thành viên và cộng tác viên cùng tham gia"
-                    : "Câu lạc bộ Sinh viên Yêu thích Sách trân trọng kính mời quý vị đến tham dự"}
+                  {greeting}{" "}
+                  {invitation.kind === "group" ? "các bạn" : "quý vị"}
+                  {congratulation ? " nhân dịp" : " đến tham dự"}
                 </p>
                 <h2 className="event-title">{event.title}</h2>
                 {event.description_rich ? (
@@ -159,24 +185,28 @@ function InvitationExperience({
                     <p className="prose">{event.description}</p>
                   )
                 )}
-                <a className="section-next" href="#invitation-schedule">
-                  Xem thời gian và địa điểm{" "}
-                  <ArrowDown size={18} aria-hidden="true" />
-                </a>
+                {!congratulation && (
+                  <a className="section-next" href="#invitation-schedule">
+                    Xem thời gian và địa điểm{" "}
+                    <ArrowDown size={18} aria-hidden="true" />
+                  </a>
+                )}
               </section>
             </InvitationChapter>
-            <InvitationChapter name="schedule">
-              <div className="paper-bridge" aria-hidden="true">
-                <div className="paper-bridge-leaf" />
-                <svg viewBox="0 0 400 64" fill="none">
-                  <path
-                    pathLength="1"
-                    d="M16 32h138c25 0 26-20 46-20s21 20 46 20h138M200 12v40m-12-20 12 12 12-12"
-                  />
-                </svg>
-              </div>
-              <MeetingSchedule event={event} />
-            </InvitationChapter>
+            {!congratulation && (
+              <InvitationChapter name="schedule">
+                <div className="paper-bridge" aria-hidden="true">
+                  <div className="paper-bridge-leaf" />
+                  <svg viewBox="0 0 400 64" fill="none">
+                    <path
+                      pathLength="1"
+                      d="M16 32h138c25 0 26-20 46-20s21 20 46 20h138M200 12v40m-12-20 12 12 12-12"
+                    />
+                  </svg>
+                </div>
+                <MeetingSchedule event={event} />
+              </InvitationChapter>
+            )}
             {!!event.quote_one?.trim() && (
               <InvitationChapter name="quote" emerald>
                 <section className="invitation-quote-one">
@@ -184,7 +214,6 @@ function InvitationExperience({
                     “
                   </span>
                   <blockquote>{event.quote_one}</blockquote>
-                  <p>CLB Sinh viên Yêu thích Sách</p>
                 </section>
               </InvitationChapter>
             )}
@@ -206,17 +235,22 @@ function InvitationExperience({
               <InvitationQuoteTwo value={event.quote_two} />
               <section className="invitation-closing">
                 <div className="closing-mark" aria-hidden="true">
-                  <BookClubLogo decorative />
+                  <HsvLogo decorative />
                 </div>
                 <p className="invitation-signoff">
-                  Sự hiện diện của{" "}
-                  {invitation.kind === "group" ? "các bạn" : "quý vị"} là niềm
-                  vinh hạnh của Câu lạc bộ.
+                  {congratulation ? "Kính chúc " : "Sự hiện diện của "}
+                  {invitation.kind === "group" ? "các bạn" : "quý vị"}
+                  {congratulation
+                    ? " nhiều niềm vui và thành công."
+                    : " là niềm vinh hạnh của Ban tổ chức."}
                 </p>
                 <p>
-                  <strong>Ban tổ chức · BookClub CTUT</strong>
+                  <strong>Trân trọng</strong>
                 </p>
-                <Link className="text-link" to={`/${event.code}`}>
+                <Link
+                  className="text-link"
+                  to={eventPath(event.code, event.event_type)}
+                >
                   Thông tin sự kiện{" "}
                   <ArrowUpRight size={18} aria-hidden="true" />
                 </Link>

@@ -245,7 +245,7 @@ export function AgendaEditor({
   const dragged = rows.find((row) => row.id === dragId);
   return (
     <fieldset id="editor-agenda">
-      <legend>Kịch bản chương trình họp mặt</legend>
+      <legend>Kịch bản chương trình</legend>
       <p className="field-hint">
         Kéo tay nắm hoặc dùng nút Lên / Xuống để sắp xếp. Thiệp hiển thị theo
         giờ; thứ tự này áp dụng cho các mốc cùng giờ.

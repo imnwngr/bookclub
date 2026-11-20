@@ -66,7 +66,7 @@ export function AdminShell() {
           <p className="section-label">Không gian quản trị</p>
           {navigation()}
           <div className="sidebar-foot">
-            <span>BookClub CTUT</span>
+            <span>Sự kiện Hội Sinh viên CTUT</span>
             <Link to="/">
               Xem trang công khai <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
@@ -95,7 +95,7 @@ export function AdminShell() {
           aria-label="Điều hướng quản trị"
         >
           <div className="navigation-dialog-head">
-            <strong>BookClub CTUT</strong>
+            <strong>Sự kiện Hội Sinh viên CTUT</strong>
             <button
               className="secondary icon-button"
               aria-label="Đóng điều hướng"

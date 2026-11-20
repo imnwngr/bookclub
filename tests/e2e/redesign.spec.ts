@@ -73,15 +73,15 @@ for (const width of [320, 360, 390, 430, 768, 1024, 1280, 1440, 1920]) {
         );
     });
     for (const [path, name, heading] of [
-      ["", "home", "Hẹn nhau"],
+      ["", "home", "Cùng nhau"],
       ["design-fixture", "detail", "Khi những trang sách"],
       ["admin/", "dashboard", "Quản lý sự kiện"],
       ["admin/edit/design-fixture", "editor", "Chỉnh sửa sự kiện"],
       ["admin/guests", "guests", "Danh bạ khách mời"],
       ["admin/roles", "roles", "Quản lý vai trò"],
-      ["admin/login", "login", "Quản lý BookClub"],
+      ["admin/login", "login", "Quản lý sự kiện"],
     ]) {
-      await page.goto(`/bookclub/${path}`);
+      await page.goto(`/hsv/${path}`);
       await expect(
         page.getByRole("heading", { name: new RegExp(heading) }).first(),
       ).toBeVisible();
@@ -95,7 +95,7 @@ for (const width of [320, 360, 390, 430, 768, 1024, 1280, 1440, 1920]) {
         `Broken image: ${name}`,
       ).toBe(true);
     }
-    await page.goto("/bookclub/design-fixture/minh-an");
+    await page.goto("/hsv/design-fixture/minh-an");
     await expect(
       page.getByRole("button", { name: "Mở thiệp mời" }),
     ).toBeVisible();
@@ -126,7 +126,7 @@ test("redesign accessibility across key routes and open dialogs", async ({
     ["admin/login", "login"],
     ["design-fixture/minh-an", "cover"],
   ]) {
-    await page.goto(`/bookclub/${path}`);
+    await page.goto(`/hsv/${path}`);
     await expect(
       page.locator("main h1, .cover-recipient").first(),
     ).toBeVisible();
@@ -146,7 +146,7 @@ test("redesign accessibility across key routes and open dialogs", async ({
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
     .analyze();
   expect(opened.violations, "invitation opened").toEqual([]);
-  await page.goto("/bookclub/admin/roles");
+  await page.goto("/hsv/admin/roles");
   await page.getByRole("button", { name: "Thêm tài khoản" }).click();
   expect(
     (
@@ -175,13 +175,13 @@ test("redesign long and minimal invitation, toolbar keyboard and drawer focus", 
       description: designEvent.description.repeat(12),
     },
   });
-  await page.goto("/bookclub/design-fixture/minh-an");
+  await page.goto("/hsv/design-fixture/minh-an");
   await page.getByRole("button", { name: "Mở thiệp mời" }).click();
   await expect(page.locator(".opening-paper")).toHaveCount(0);
   await page.locator(".invitation-closing").scrollIntoViewIfNeeded();
   await page.locator("#invitation-greeting").scrollIntoViewIfNeeded();
   await capture(page, `long-invitation-${info.project.name}`);
-  await page.goto("/bookclub/admin/edit/design-fixture");
+  await page.goto("/hsv/admin/edit/design-fixture");
   const toolbar = page.getByRole("toolbar").first();
   await toolbar.getByRole("button", { name: "Đậm", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
@@ -196,7 +196,7 @@ test("redesign long and minimal invitation, toolbar keyboard and drawer focus", 
     .getByRole("button", { name: "Thời gian sự kiện", exact: true })
     .click();
   await capture(page, `range-popover-${info.project.name}`);
-  await page.goto("/bookclub/admin/");
+  await page.goto("/hsv/admin/");
   if (info.project.name === "mobile") {
     await page.getByRole("button", { name: "Điều hướng", exact: true }).click();
     await capture(page, "admin-drawer-mobile");
@@ -217,7 +217,7 @@ test("redesign long and minimal invitation, toolbar keyboard and drawer focus", 
       description_rich: null,
     },
   });
-  await page.goto("/bookclub/design-fixture/thanh-vien");
+  await page.goto("/hsv/design-fixture/thanh-vien");
   await page.getByRole("button", { name: "Mở thiệp mời" }).click();
   await expect(page.locator(".opening-paper")).toHaveCount(0);
   await expect(
@@ -227,7 +227,7 @@ test("redesign long and minimal invitation, toolbar keyboard and drawer focus", 
   ).toHaveCount(0);
   await capture(page, `minimal-invitation-${info.project.name}`);
   await designBackend(page, { empty: true });
-  await page.goto("/bookclub/design-fixture/missing");
+  await page.goto("/hsv/design-fixture/missing");
   await expect(
     page.getByRole("heading", { name: "Chưa có nội dung" }),
   ).toBeVisible();
@@ -245,7 +245,7 @@ test("redesign menu, range focus, agenda identities and reduced motion", async (
 }, info) => {
   await designBackend(page, { admin: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/bookclub/");
+  await page.goto("/hsv/");
   await page.getByRole("button", { name: "Mở menu điều hướng" }).click();
   await expect(
     page.getByRole("dialog", { name: "Điều hướng chính" }),
@@ -254,7 +254,7 @@ test("redesign menu, range focus, agenda identities and reduced motion", async (
   await expect(
     page.getByRole("button", { name: "Mở menu điều hướng" }),
   ).toBeFocused();
-  await page.goto("/bookclub/admin/edit/design-fixture");
+  await page.goto("/hsv/admin/edit/design-fixture");
   await page
     .getByRole("button", { name: "Thời gian sự kiện", exact: true })
     .click();
@@ -285,7 +285,7 @@ test("redesign menu, range focus, agenda identities and reduced motion", async (
     page.getByRole("button", { name: "Chọn icon mốc 2", exact: true }),
   ).toBeFocused();
   await capture(page, `agenda-edit-${info.project.name}`);
-  await page.goto("/bookclub/design-fixture/thanh-vien");
+  await page.goto("/hsv/design-fixture/thanh-vien");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.getByRole("button", { name: "Mở thiệp mời" }).click();
   await expect(page.locator(".opening-paper")).toHaveCount(0);
@@ -301,7 +301,7 @@ test("redesign menu, range focus, agenda identities and reduced motion", async (
 test("redesign loading, error and empty states", async ({ page }, info) => {
   test.setTimeout(45000);
   await designBackend(page, { empty: true });
-  await page.goto("/bookclub/");
+  await page.goto("/hsv/");
   await expect(page.getByText("Chưa có nội dung")).toBeVisible();
   await capture(page, `empty-${info.project.name}`);
   let release!: () => void;

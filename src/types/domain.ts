@@ -1,4 +1,9 @@
 export type Publication = "draft" | "published";
+export type EventType = "invitation" | "congratulation";
+export interface EventTheme {
+  version: 1;
+  primary: string;
+}
 export interface AgendaItem {
   time: string;
   end_time?: string | null;
@@ -7,6 +12,8 @@ export interface AgendaItem {
   highlight: boolean;
 }
 export interface ClubEvent {
+  event_type?: EventType;
+  theme?: EventTheme;
   id: string;
   code: string;
   title: string;
@@ -15,8 +22,8 @@ export interface ClubEvent {
   music_path?: string | null;
   quote_one?: string;
   quote_two?: unknown;
-  starts_at: string;
-  ends_at: string;
+  starts_at: string | null;
+  ends_at: string | null;
   status: Publication;
   venue_name: string;
   address: string;

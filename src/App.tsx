@@ -26,7 +26,7 @@ export const router = createBrowserRouter(
       errorElement: (
         <div className="state">
           <h1>Không thể mở trang</h1>
-          <a href="/bookclub/">Về trang chủ</a>
+          <a href={import.meta.env.BASE_URL}>Về trang chủ</a>
         </div>
       ),
       children: [
@@ -34,6 +34,14 @@ export const router = createBrowserRouter(
         { path: "admin/login", element: <Login /> },
         {
           path: "auth/accept",
+          element: (
+            <Suspense fallback={<Loading />}>
+              <AcceptInvitation />
+            </Suspense>
+          ),
+        },
+        {
+          path: "auth/callback",
           element: (
             <Suspense fallback={<Loading />}>
               <AcceptInvitation />
@@ -85,6 +93,25 @@ export const router = createBrowserRouter(
             },
           ],
         },
+        ...["thiep-moi", "thiep-chuc"].flatMap((segment) => [
+          {
+            path: `${segment}/:eventCode/:guestAlias`,
+            Component: InvitationPage,
+            loader: ({
+              params,
+            }: {
+              params: Record<string, string | undefined>;
+            }) => {
+              const { eventCode = "", guestAlias = "" } = params;
+              void client.prefetchQuery({
+                queryKey: ["invitation", eventCode, guestAlias],
+                queryFn: () => resolveInvitation(eventCode, guestAlias),
+              });
+              return null;
+            },
+          },
+          { path: `${segment}/:eventCode`, element: <EventDetail /> },
+        ]),
         {
           path: ":eventCode/:guestAlias",
           Component: InvitationPage,
@@ -123,5 +150,5 @@ export const router = createBrowserRouter(
       ],
     },
   ],
-  { basename: "/bookclub" },
+  { basename: import.meta.env.BASE_URL.replace(/\/$/, "") },
 );

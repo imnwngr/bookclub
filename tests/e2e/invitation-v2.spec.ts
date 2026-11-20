@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
 import { designBackend, designEvent, designGuests } from "./redesign-fixtures";
 
-const route = "/bookclub/design-fixture/minh-an";
+const route = "/hsv/design-fixture/minh-an";
 const output = ".local/ui-redesign/invitation-v2/after";
 async function fixture(page: Page) {
   await designBackend(page, {
