@@ -1,6 +1,8 @@
 # Sự kiện Hội Sinh viên CTUT · 3.0.0
 
-Nền tảng sự kiện Hội Sinh viên CTUT. Source 3.0.0 bổ sung Thiệp mời/Thiệp chúc, màu riêng cho từng sự kiện và luồng thêm Editor có trạng thái khôi phục. Giữ typography tiếng Việt, vật liệu giấy/dệt, opening và nhạc Liquid Glass. **Database và Edge v3 đã triển khai; Auth có callback cũ/mới; frontend chưa phát hành.** Chưa có dịch vụ gửi email nên lời mời email mới vẫn tắt. Đây là điều kiện còn thiếu trước khi hoàn tất phiên bản, đổi repository/Pages và tạo tag. Xem [HSV-V3-PLAN.md](HSV-V3-PLAN.md), [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md) và [HSV-V3-VERIFICATION.md](HSV-V3-VERIFICATION.md).
+Nền tảng sự kiện Hội Sinh viên CTUT. Source 3.0.0 bổ sung Thiệp mời/Thiệp chúc, màu riêng cho từng sự kiện và luồng thêm Editor có trạng thái khôi phục. Giữ typography tiếng Việt, vật liệu giấy/dệt, opening và nhạc Liquid Glass. **Database và Edge v3 đã triển khai; Auth có callback cũ/mới; frontend HSV v3 chưa phát hành.** SMTP Resend đã hoàn tất theo xác nhận của người dùng: đã tự cấu hình và nhận email thử thành công. Đây chưa phải bằng chứng kiểm thử toàn bộ luồng mời Editor production. Đợt Git/tài liệu này không thay cờ gửi lời mời hoặc tạo tag. Xem [HSV-V3-PLAN.md](HSV-V3-PLAN.md), [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md) và [HSV-V3-VERIFICATION.md](HSV-V3-VERIFICATION.md).
+
+Repository: [imnwngr/hsv](https://github.com/imnwngr/hsv). Source v3 nằm trên nhánh `hsv-v3`; nhánh mặc định `main` chưa được cập nhật trong lần đổi tên. Remote Git chính thức là `https://github.com/imnwngr/hsv.git`.
 
 ## Chạy local
 
@@ -30,6 +32,6 @@ Không đặt UUID tài khoản production, mật khẩu hoặc credentials vào
 
 ## Maps, kiểm thử và phát hành
 
-Địa điểm hỗ trợ Google Maps URL/Place ID thủ công. Nếu dùng API key, hạn chế theo HTTP referrer, API và quota. Chạy `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:e2e`, `npm run build`; browser tests hiện dùng mocks, còn live checks được ghi riêng trong VERIFICATION.md.
+Địa điểm hỗ trợ Google Maps URL/Place ID thủ công. Nếu dùng API key, hạn chế theo HTTP referrer, API và quota. Chạy `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:e2e`, `npm run build`; browser tests hiện dùng mocks, còn native sandbox và kiểm chứng production được ghi riêng trong [HSV-V3-VERIFICATION.md](HSV-V3-VERIFICATION.md).
 
-Vite/Router dùng `/hsv/`, thiệp dùng `/thiep-moi/:code/:alias` hoặc `/thiep-chuc/:code/:alias`. GitHub Pages fallback dùng `404.html`, deep link có thể trả HTTP 404 ban đầu trước khi client khôi phục route. Workflow kiểm tra main/hsv-v3; deploy chỉ tại repo `imnwngr/hsv`, branch main, `HSV_V3_PRODUCTION_READY=true` và capability backend hợp lệ. Không bật gate khi chưa có bằng chứng production. Push nhánh triển khai không deploy Pages. Chưa rename repo; không cam kết `/bookclub/` tự chuyển hướng sau rename. Không rollback mù về v2 vì Thiệp chúc có thời gian null.
+Vite/Router dùng `/hsv/`, thiệp dùng `/thiep-moi/:code/:alias` hoặc `/thiep-chuc/:code/:alias`. GitHub Pages fallback dùng `404.html`, deep link có thể trả HTTP 404 ban đầu trước khi client khôi phục route. Workflow kiểm tra main/hsv-v3; deploy chỉ tại repo `imnwngr/hsv`, branch main, `HSV_V3_PRODUCTION_READY=true` và capability backend hợp lệ. Không bật gate khi chưa có bằng chứng production. Push nhánh triển khai không deploy Pages. Kiểm tra HTTP sau rename ngày 20/11: `/bookclub/` trả 404; `/hsv/` trả HTML BookClub cũ và còn tham chiếu hai script dưới `/bookclub/assets/`, đều trả 404. Đây chưa phải frontend HSV v3; cần xử lý phát hành trong đợt riêng. Không rollback mù về v2 vì Thiệp chúc có thời gian null.
