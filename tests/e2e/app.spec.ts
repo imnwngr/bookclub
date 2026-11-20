@@ -357,13 +357,21 @@ test("guest directory edits and primary invitation only (mock API)", async ({
     page.getByRole("button", { name: "Sao chép link" }),
   ).toBeVisible();
 });
-test("login and logout require authentication (mock API)", async ({ page }) => {
+test("login and logout require authentication (mock API)", async ({
+  page,
+  isMobile,
+}) => {
   await backend(page);
+  let completeAuth!: () => void;
+  const authPending = new Promise<void>((resolve) => {
+    completeAuth = resolve;
+  });
   await page.route("**/rest/v1/rpc/can_edit_content", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: "true" }),
   );
-  await page.route("**/auth/v1/token?**", (r) =>
-    r.fulfill({
+  await page.route("**/auth/v1/token?**", async (r) => {
+    await authPending;
+    return r.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
@@ -379,20 +387,25 @@ test("login and logout require authentication (mock API)", async ({ page }) => {
           email: "admin@test.invalid",
         },
       }),
-    }),
-  );
+    });
+  });
   await page.goto("/hsv/admin/login");
   await page.getByLabel("Email").fill("admin@test.invalid");
   await page.getByLabel("Mật khẩu").fill("test-only-password");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(
+    page.getByRole("button", { name: "Đang đăng nhập…", exact: true }),
+  ).toBeDisabled();
+  await expect(page).toHaveURL(/\/hsv\/admin\/login$/);
+  completeAuth();
+  await expect(page).toHaveURL(/\/hsv\/admin\/$/);
+  await expect(
     page.getByRole("heading", { name: "Quản lý sự kiện", exact: true }),
   ).toBeVisible();
-  if (
-    await page
-      .getByRole("button", { name: "Điều hướng", exact: true })
-      .isVisible()
-  )
+  await expect(
+    page.getByRole("link", { name: "Thêm sự kiện", exact: true }),
+  ).toBeVisible();
+  if (isMobile)
     await page.getByRole("button", { name: "Điều hướng", exact: true }).click();
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
   await expect(
@@ -1292,11 +1305,9 @@ test("guest directory compact/full, dirty guard, reorder and reload (mock API)",
   await expect(page.locator(".is-placeholder")).toHaveCount(1);
   await page.keyboard.press("ArrowUp");
   await expect(
-    page
-      .getByRole("status")
-      .filter({
-        hasText: `was moved over droppable area ${before[before.indexOf("guest-0") - 1]}`,
-      }),
+    page.getByRole("status").filter({
+      hasText: `was moved over droppable area ${before[before.indexOf("guest-0") - 1]}`,
+    }),
   ).toBeAttached();
   const rejected = page.waitForResponse(
     (r) => r.url().endsWith("/reorder_guests") && r.status() === 409,
