@@ -183,6 +183,15 @@
   background: var(--brand);
   font-size: 0.875rem;
 }
+.role-add-form {
+  gap: 1rem;
+}
+.role-add-form :is(h2, p) {
+  margin-block: 0;
+}
+.role-add-form .actions {
+  margin-top: 0;
+}
 .role-feedback {
   margin-block: 1rem;
   padding: 1rem;

@@ -101,6 +101,33 @@ it("rejects anonymous, non-Admin, invalid payload, Admin assignment and bad emai
   expect(rpc).not.toHaveBeenCalled();
   expect(invite).not.toHaveBeenCalled();
 });
+it("reports invitation availability only to Admin without account or email side effects", async () => {
+  const body = { action: "capabilities", role: "editor" };
+  expect(await (await handler(request(body))).json()).toEqual({
+    ok: true,
+    invitations_enabled: true,
+  });
+  delete env.HSV_INVITATIONS_ENABLED;
+  expect(await (await handler(request(body))).json()).toEqual({
+    ok: true,
+    invitations_enabled: false,
+  });
+  env.HSV_INVITATIONS_ENABLED = "verified";
+  env.BOOKCLUB_ROLE_MODE = "fixture";
+  expect(await (await handler(request(body))).json()).toEqual({
+    ok: true,
+    invitations_enabled: false,
+  });
+  expect((await handler(request({ ...body, email: add.email }))).status).toBe(
+    400,
+  );
+  isAdmin = false;
+  expect((await handler(request(body))).status).toBe(403);
+  authenticated = false;
+  expect((await handler(request(body))).status).toBe(401);
+  expect(rpc).not.toHaveBeenCalled();
+  expect(invite).not.toHaveBeenCalled();
+});
 it("claims in SQL before sending, uses /hsv/ callback, and reports pending invitation only after grant", async () => {
   const r = await handler(request(add));
   expect(r.status).toBe(200);

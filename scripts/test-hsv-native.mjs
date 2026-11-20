@@ -260,6 +260,23 @@ verify_jwt = true
       "Native existing-account grant failed",
     );
     passed("Auth JWT + server Admin verification + existing-account grant");
+    const capability = { action: "capabilities", role: "editor" };
+    const operationCount = sql(
+      "select count(*) from public.editor_add_operations",
+    );
+    const userCount = sql("select count(*) from auth.users");
+    assert.deepEqual((await request(capability)).body, {
+      ok: true,
+      invitations_enabled: true,
+    });
+    assert.equal(
+      sql("select count(*) from public.editor_add_operations"),
+      operationCount,
+    );
+    assert.equal(sql("select count(*) from auth.users"), userCount);
+    passed(
+      "Admin reads invitation availability without creating accounts or ledger entries",
+    );
     const legacyAccount = await create("legacy-client@fixture.invalid");
     const legacyGrant = {
       action: "grant",

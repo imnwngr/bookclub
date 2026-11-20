@@ -248,8 +248,9 @@ test("v3 add Editor dialog handles default, loading, partial error, retry and pe
   });
   let success = false;
   await page.route("**/functions/v1/manage-editors", async (route) => {
-    calls++;
     const body = route.request().postDataJSON();
+    if (body.action === "capabilities") return route.fallback();
+    calls++;
     expect(body).toMatchObject({
       action: "add",
       email: "qa@fixture.invalid",
@@ -306,6 +307,127 @@ test("v3 add Editor dialog handles default, loading, partial error, retry and pe
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
+});
+test("v3 disabled email invitation is explained before adding, retries safely, and still grants existing accounts (mock API)", async ({
+  page,
+}, info) => {
+  await designBackend(page, { admin: true });
+  let checks = 0;
+  const adds: { email: string; request_id: string }[] = [];
+  await page.route("**/functions/v1/manage-editors", async (route) => {
+    const body = route.request().postDataJSON();
+    if (body.action === "capabilities") {
+      checks++;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, invitations_enabled: false }),
+      });
+    }
+    adds.push(body);
+    const existing = body.email === "existing@fixture.invalid";
+    return route.fulfill({
+      status: existing ? 200 : 409,
+      contentType: "application/json",
+      body: JSON.stringify(
+        existing
+          ? { ok: true, state: "granted", account_status: "confirmed" }
+          : { code: "invitation_not_ready" },
+      ),
+    });
+  });
+  await page.goto("/hsv/admin/roles");
+  await page
+    .getByRole("button", { name: "Thêm tài khoản", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByText(/Hiện chỉ thêm được tài khoản đã tồn tại/),
+  ).toBeVisible();
+  expect(adds).toHaveLength(0);
+  for (const width of info.project.name === "mobile"
+    ? [320, 390, 430]
+    : [1024]) {
+    await page.setViewportSize({ width, height: 800 });
+    await expect(
+      dialog.getByRole("button", { name: "Thêm Editor", exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+    await expect(
+      dialog.getByRole("button", { name: "Hủy", exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+    await capture(page, `account-email-disabled-${info.project.name}-${width}`);
+  }
+  await dialog.getByLabel("Email", { exact: true }).fill("new@fixture.invalid");
+  await dialog
+    .getByRole("button", { name: "Thêm Editor", exact: true })
+    .click();
+  await expect(
+    dialog.getByText(/Chưa tạo tài khoản hoặc gửi email/),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Kiểm tra và khôi phục", exact: true }),
+  ).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Thử lại", exact: true }).click();
+  await expect(
+    dialog.getByRole("button", { name: "Thử lại", exact: true }),
+  ).toBeEnabled();
+  expect(adds).toHaveLength(2);
+  expect(adds[1].request_id).toBe(adds[0].request_id);
+  await dialog
+    .getByLabel("Email", { exact: true })
+    .fill("existing@fixture.invalid");
+  await dialog
+    .getByRole("button", { name: "Thêm Editor", exact: true })
+    .click();
+  await expect(
+    dialog.getByText("Đã cấp quyền Editor cho tài khoản hiện có."),
+  ).toBeVisible();
+  expect(adds[2].request_id).not.toBe(adds[0].request_id);
+  expect(checks).toBeGreaterThan(0);
+  expect(
+    (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
+      .violations,
+  ).toEqual([]);
+  await capture(
+    page,
+    `account-existing-with-email-disabled-${info.project.name}`,
+  );
+});
+test("v3 invitation availability failure can be checked again without submitting an account (mock API)", async ({
+  page,
+}, info) => {
+  await designBackend(page, { admin: true });
+  let fail = true;
+  let mutations = 0;
+  await page.route("**/functions/v1/manage-editors", async (route) => {
+    if (route.request().postDataJSON()?.action !== "capabilities") mutations++;
+    return route.fulfill({
+      status: fail ? 503 : 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        fail
+          ? { code: "configuration_missing" }
+          : { ok: true, invitations_enabled: true },
+      ),
+    });
+  });
+  await page.goto("/hsv/admin/roles");
+  await page
+    .getByRole("button", { name: "Thêm tài khoản", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByText(/Chưa kiểm tra được khả năng gửi lời mời/),
+  ).toBeVisible();
+  await capture(page, `account-availability-error-${info.project.name}`);
+  fail = false;
+  await dialog
+    .getByRole("button", { name: "Kiểm tra lại trạng thái", exact: true })
+    .click();
+  await expect(
+    dialog.getByText(/Email mới sẽ được mời tham gia/),
+  ).toBeVisible();
+  expect(mutations).toBe(0);
 });
 test("v3 expired and used Auth links show recovery even with an existing session", async ({
   page,

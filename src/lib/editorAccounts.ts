@@ -14,7 +14,7 @@ export const accountMessages: Record<string, string> = {
   backend_not_ready:
     "Backend quản lý tài khoản chưa sẵn sàng. Chưa xác nhận thay đổi quyền.",
   invitation_not_ready:
-    "Email này chưa có tài khoản. Hệ thống mời qua email chưa được xác minh và mở trên máy chủ.",
+    "Email này chưa có tài khoản và chức năng gửi lời mời đang tắt. Chưa tạo tài khoản hoặc gửi email. Bạn vẫn có thể thêm tài khoản đã tồn tại.",
   processing:
     "Yêu cầu đang được xử lý. Chờ một lát rồi kiểm tra lại; hệ thống không gửi email lần nữa.",
   delivery_unknown:

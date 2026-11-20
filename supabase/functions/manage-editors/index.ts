@@ -31,7 +31,11 @@ Deno.serve(async request => {
     if (sandbox && (!/^http:\/\/(localhost|127\.0\.0\.1|kong|supabase_kong_[a-z0-9_-]+)(:\d+)?$/.test(url) || origin === productionOrigin)) return reply(503, { code: "sandbox_configuration_invalid" });
     let body: Record<string, unknown>;
     try { body = await request.json(); } catch { return reply(400, { code: "invalid_request" }); }
-    if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some(k => !["action", "email", "role", "user_id", "request_id"].includes(k)) || body.role !== "editor" || !["add", "grant", "invite", "revoke"].includes(String(body.action))) return reply(400, { code: "invalid_request" });
+    if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some(k => !["action", "email", "role", "user_id", "request_id"].includes(k)) || body.role !== "editor" || !["capabilities", "add", "grant", "invite", "revoke"].includes(String(body.action))) return reply(400, { code: "invalid_request" });
+    if (body.action === "capabilities") {
+      if (Object.keys(body).some(k => !["action", "role"].includes(k))) return reply(400, { code: "invalid_request" });
+      return reply(200, { ok: true, invitations_enabled: mode !== "fixture" && Deno.env.get("HSV_INVITATIONS_ENABLED") === "verified" });
+    }
     const service = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(25000) }) } });
     const fixture = Deno.env.get("BOOKCLUB_ROLE_FIXTURE_USER_ID");
     if (mode === "fixture" && (!fixture || !uuid.test(fixture))) return reply(503, { code: "fixture_missing" });

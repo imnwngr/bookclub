@@ -21,6 +21,7 @@ export default function RoleDirectory() {
   const [feedback, setFeedback] = useState<{
     text: string;
     success: boolean;
+    recovery?: boolean;
   } | null>(null);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const inFlight = useRef(false);
@@ -60,6 +61,24 @@ export default function RoleDirectory() {
       return r.data as { email: string; state: string; updated_at: string }[];
     },
   });
+  const capabilities = useQuery({
+    queryKey: ["editor-add-capabilities"],
+    enabled: dialog && role.data === "admin",
+    retry: false,
+    queryFn: async ({ signal }) => {
+      const r = await db().functions.invoke("manage-editors", {
+        body: { action: "capabilities", role: "editor" },
+        signal: AbortSignal.any([signal, AbortSignal.timeout(12000)]),
+      });
+      if (
+        r.error ||
+        !r.data?.ok ||
+        typeof r.data.invitations_enabled !== "boolean"
+      )
+        throw Error("Không kiểm tra được trạng thái gửi lời mời.");
+      return { invitationsEnabled: r.data.invitations_enabled as boolean };
+    },
+  });
   function openAdd(value = "") {
     setEmail(value);
     setFeedback(null);
@@ -78,6 +97,7 @@ export default function RoleDirectory() {
     setFeedback(null);
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 35000);
+    let failureCode = "outcome_unknown";
     try {
       const r = await db().functions.invoke("manage-editors", {
         body: { ...body, role: "editor" },
@@ -87,17 +107,20 @@ export default function RoleDirectory() {
         let message = accountMessages.outcome_unknown;
         if (r.error.context instanceof Response) {
           const detail = await r.error.context.json().catch(() => null);
+          failureCode = detail?.code ?? "outcome_unknown";
           message =
             accountMessages[detail?.code] ??
             "Không thể hoàn tất. Kiểm tra trạng thái tài khoản trước khi thử lại.";
         }
         throw Error(message);
       }
-      if (!r.data?.ok)
+      if (!r.data?.ok) {
+        failureCode = r.data?.code ?? "outcome_unknown";
         throw Error(
           accountMessages[r.data?.code] ??
             "Chưa xác nhận được kết quả cập nhật quyền.",
         );
+      }
       if (body.action === "add")
         setFeedback({
           text: accountResultMessage(r.data.state, r.data.account_status),
@@ -112,7 +135,20 @@ export default function RoleDirectory() {
       const text = controller.signal.aborted
         ? accountMessages.outcome_unknown
         : errorMessage(e);
-      if (body.action === "add") setFeedback({ text, success: false });
+      if (body.action === "add")
+        setFeedback({
+          text,
+          success: false,
+          recovery:
+            controller.signal.aborted ||
+            [
+              "processing",
+              "delivery_unknown",
+              "grant_failed",
+              "outcome_unknown",
+              "request_failed",
+            ].includes(failureCode),
+        });
       else toast.error(text);
     } finally {
       window.clearTimeout(timer);
@@ -243,7 +279,7 @@ export default function RoleDirectory() {
           aria-label="Thêm tài khoản Editor"
         >
           <form
-            className="panel"
+            className="panel role-add-form"
             onSubmit={(e) => {
               e.preventDefault();
               void mutate({
@@ -255,10 +291,34 @@ export default function RoleDirectory() {
           >
             <h2>Thêm tài khoản</h2>
             <p>
-              Tài khoản đã có sẽ được cấp quyền Editor. Email mới sẽ nhận lời
-              mời để hoàn tất tài khoản. Hệ thống tự kiểm tra, không gửi lại
-              email khi thử khôi phục.
+              Nhập email để hệ thống kiểm tra và cấp quyền Editor cho tài khoản
+              đã có. Khi khôi phục yêu cầu, hệ thống không tự gửi lại email.
             </p>
+            <div role="status" aria-live="polite">
+              {capabilities.isFetching ? (
+                <p>Đang kiểm tra trạng thái gửi lời mời…</p>
+              ) : capabilities.error ? (
+                <p>
+                  Chưa kiểm tra được khả năng gửi lời mời. Hệ thống sẽ xác nhận
+                  khi bạn thêm tài khoản.{" "}
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={busy}
+                    onClick={() => void capabilities.refetch()}
+                  >
+                    Kiểm tra lại trạng thái
+                  </button>
+                </p>
+              ) : capabilities.data?.invitationsEnabled ? (
+                <p>Email mới sẽ được mời tham gia để hoàn tất tài khoản.</p>
+              ) : (
+                <p className="notice">
+                  Gửi lời mời qua email đang tắt. Hiện chỉ thêm được tài khoản
+                  đã tồn tại.
+                </p>
+              )}
+            </div>
             <label>
               Email
               <input
@@ -297,9 +357,11 @@ export default function RoleDirectory() {
                   ? "Đang xử lý…"
                   : feedback?.success
                     ? "Đã có quyền Editor"
-                    : feedback
+                    : feedback?.recovery
                       ? "Kiểm tra và khôi phục"
-                      : "Thêm Editor"}
+                      : feedback
+                        ? "Thử lại"
+                        : "Thêm Editor"}
               </button>
               <button
                 type="button"

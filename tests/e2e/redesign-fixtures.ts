@@ -148,6 +148,11 @@ export async function designBackend(
       body = admin;
     else if (path.endsWith("/effective_role")) body = admin ? "admin" : null;
     else if (path.endsWith("/hsv_v3_capabilities")) body = { version: 3 };
+    else if (
+      path.endsWith("/manage-editors") &&
+      request.postDataJSON()?.action === "capabilities"
+    )
+      body = { ok: true, invitations_enabled: true };
     else if (path.endsWith("/role_directory"))
       body = [
         {
