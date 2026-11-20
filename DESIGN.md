@@ -54,6 +54,8 @@ Admin nhập email, hệ thống tự phân biệt tài khoản hiện có và e
 
 Session và quyền Admin kiểm lại ở server/RPC; không dựa vào ẩn nút. Retry không tự gửi lại email; revoke vô hiệu hóa worker cũ, retry của yêu cầu vừa bị thu hồi không tự cấp lại. Chi tiết kỹ thuật và giới hạn nằm trong [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md), không đưa vào luồng thao tác thông thường.
 
+Trạng thái gửi lời mời được đọc khi mở dialog: đang kiểm tra, đang tắt, đã mở hoặc không kiểm tra được. Khi đang tắt, Admin vẫn thêm tài khoản có sẵn; thông báo email mới không hứa gửi thành công. Lỗi chưa bắt đầu thao tác dùng “Thử lại”; kết quả chưa xác định/lỗi một phần dùng “Kiểm tra và khôi phục”. Khoảng cách riêng form là 1rem, bỏ margin đoạn văn chồng lên grid để nút thao tác vẫn nằm trong viewport ở 320/390/430px. Các vùng thông báo giữ `role=status`; native dialog giữ focus/Escape.
+
 ## Phương pháp và bằng chứng
 
 Design-team đã đọc catalog, dùng hệ thiết kế hiện có làm hướng. Hallmark dùng hướng dẫn nhất quán cho component, không chạy scaffold/theme mới; better-accessibility dùng semantics, focus và error recovery; Anti-slop `during` theo global preference và audit cuối. Không gọi dịch vụ tạo ảnh, thêm GSAP hoặc external AI worker. Không tuyên bố đã chạy Hallmark sloplint.

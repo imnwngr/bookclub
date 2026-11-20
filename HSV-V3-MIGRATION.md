@@ -1,6 +1,6 @@
 # HSV 3.0.0: migration và chuyển đổi
 
-**Hai migration database đã áp dụng production ngày 20/11/2026; Edge/Auth/frontend chưa rollout.** Kết nối MCP xác nhận project `trdofhdspbkwgernwybp`, PostgreSQL 17.11, trạng thái ACTIVE_HEALTHY. Đã đọc schema, ACL/RLS, lịch sử và Edge revision 1, lấy snapshot phần bị ảnh hưởng, khôi phục trên PostgreSQL local và chạy hai file migration nguyên bản trước khi áp dụng. Chi tiết và giới hạn backup ở dưới. CLI 3.2.0 chính thức vẫn chưa đăng nhập; plugin hiện không có công cụ đọc/sửa Auth config, SMTP, Edge secrets hoặc quản lý backup nền tảng. Không đưa password/token vào chat hoặc repository.
+**Hai migration database và Edge v3 đã triển khai production ngày 20/11/2026; Auth đã có callback cũ/mới; frontend chưa phát hành.** MCP và CLI 3.2.0 đã xác thực với project `trdofhdspbkwgernwybp`, PostgreSQL 17.11, ACTIVE_HEALTHY. Trước migration đã đọc schema/ACL/RLS/history, lấy snapshot phần bị ảnh hưởng, khôi phục trên PostgreSQL local và chạy hai file migration nguyên bản. Chi tiết và giới hạn backup ở dưới. Chưa có dịch vụ gửi email, nên `HSV_INVITATIONS_ENABLED=disabled`. Không đưa password/token vào chat hoặc repository.
 
 ## Trạng thái đã áp dụng
 
@@ -11,13 +11,23 @@
 
 MCP tạo timestamp history thực tế khác tên file local; **không chạy lại hai file**. Bốn migration history có trước đã được đối chiếu với definitions, không suy luận từ tên file. Fingerprint cả 9 bảng cũ giữ nguyên sau khi bỏ hai thuộc tính mới khỏi phép so sánh `events`; 24 hàm không liên quan giữ nguyên. `hsv_v3_capabilities()` trả đủ hai loại, theme v1 và editor ledger. Ledger trống, có RLS, client không có SELECT/INSERT hoặc EXECUTE begin/finish; service_role có EXECUTE.
 
+Edge hiện là revision 5, source khớp `e2670a0`, JWT verification bật. Action `capabilities` chỉ dành cho Admin, chỉ đọc cờ mời email và không tạo ledger/user. Đã thử trên native sandbox trước deploy; source/HTTP kiểm lại sau deploy. Không có migration mới cho action này. Chi tiết bản deploy và các bằng chứng trong [nghiệm thu](HSV-V3-VERIFICATION.md).
+
 ## Backup có phạm vi và thử phục hồi
 
 Snapshot được đọc trong một SQL statement nhất quán, lưu tại `C:\dev\temp\hsv-v3-production` ngoài repository, ACL chỉ Windows user hiện tại và SYSTEM. Bao gồm 9 bảng `public`, columns/defaults/constraints/indexes/triggers/policies/grants, 26 functions, history, storage policy definitions và Edge source revision 1. Chỉ lưu Auth UUID cần cho FK, **không** lưu mật khẩu, token, email Auth hoặc session. Snapshot không gồm Storage bytes, toàn bộ Auth, managed-service configuration, roles toàn cluster hoặc backup/PITR của Supabase Free.
 
 `node scripts/verify-hsv-production-snapshot.mjs` kiểm SHA-256 manifest, khôi phục schema/rows trong PostgreSQL 17.11 loopback dùng mật khẩu ngẫu nhiên, đối chiếu toàn bộ rows và definitions, chạy hai migration nguyên bản, kiểm null Thiệp chúc/validation Thiệp mời/draft resolver/ACL, rồi dừng cluster. Lần PASS có bằng chứng tại `C:\dev\temp\hsv-v3-production\restore-2026-11-19T22-02-15-763Z\result.json`. Đây là phục hồi phần `public` cần cho các migration tương thích, không phải diễn tập khôi phục cả Supabase/Auth/Storage. Không upload snapshot lên CI hoặc đưa vào git.
 
-Containment của thay đổi đã áp dụng: giữ cột và ledger mới, giữ dữ liệu phát sinh; không rollback mù về schema v2 hoặc restore snapshot lên production. Edge vẫn revision 1 và Pages vẫn v2 khi ghi nhận mốc này, nên chưa có thao tác thêm tài khoản qua mã v3. Cấu hình Auth/SMTP/Edge secrets phải được kiểm tra qua CLI hoặc Dashboard đã xác thực trước khi mở lời mời thật.
+Containment: giữ cột và ledger mới cùng mọi dữ liệu phát sinh; không rollback mù về schema v2 hoặc restore snapshot lên production. Edge đã cập nhật v3, Pages còn v2. Kiểm tra lại ngày 20/11 xác nhận ledger vẫn trống. Backup trước đổi Auth và Edge nằm tại `C:\dev\temp\hsv-v3-rollout`, ngoài repo; bản revision 4 được lưu trước bổ sung action capability, SHA-256 `7EA652F02414BAEC2E5ABCB439BEF9627349545A913DB7B0431C856CEFD585C3`. Rollback Edge có thể dùng revision 4 để giữ ledger/v3, không quay về nhánh invite cũ và không xóa dữ liệu.
+
+## Auth và email: trạng thái hiện tại
+
+CLI đọc lại cấu hình xác nhận allowlist gồm cả bốn callback accept/callback dưới `/bookclub/` và `/hsv/`. Site URL là `https://imnwngr.github.io/bookclub/` để khớp Pages hiện tại; chỉ chuyển sang `/hsv/` cùng đợt frontend. Các cấu hình Auth khác được giữ nguyên. Edge xác minh JWT, CORS chỉ dùng `https://imnwngr.github.io`, mode `live` và gửi lời mời `disabled`. Metadata digest của hai cờ được đối chiếu với giá trị dự kiến mà không in giá trị bí mật. Custom SMTP và send-email hook đều chưa bật.
+
+Người dùng xác nhận chưa có dịch vụ gửi email. Theo [tài liệu SMTP của Supabase](https://supabase.com/docs/guides/auth/auth-smtp), bộ gửi mặc định giới hạn địa chỉ thuộc team và hiện có hạn mức 2 thư/giờ; không dùng để mở tính năng mời email tùy ý. Điều kiện tối thiểu còn cần: cấu hình provider SMTP/sender đã xác minh trực tiếp tại [Auth SMTP](https://supabase.com/dashboard/project/trdofhdspbkwgernwybp/auth/smtp), không gửi mật khẩu/token qua chat. Chưa có điều kiện này thì không bật `verified`, không gửi thử tới người thật và không coi lời mời production đã hoạt động.
+
+Sau khi có provider: đọc lại cấu hình đã che secrets, xác nhận sender/domain và redirect; thử bằng mailbox sandbox do provider hỗ trợ hoặc mail sink tách biệt; giữ trạng thái chưa xác minh delivery production nếu chưa có kiểm chứng tương ứng. Chỉ mở gửi thư sau khi `/hsv/auth/accept` được phục vụ và smoke đã PASS. Trong chuyển đổi giữ cờ disabled cho đến khi Pages mới sẵn sàng. Hộp thoại đọc capability từ Edge cho Admin và nêu rõ khi chỉ thêm được tài khoản có sẵn; server vẫn kiểm điều kiện ở mỗi thao tác add.
 
 ## Trước khi ghi production
 
@@ -34,10 +44,10 @@ Chỉ áp dụng **các file mới chưa áp dụng**, qua migration management 
 2. Chạy postflight tương ứng, đối chiếu fingerprint trước/sau, RLS/ACL và resolver. Ngay sau migration đầu, mọi dữ liệu cũ phải là invitation. Không có update nội dung lịch sử hoặc media.
 3. `202611200002_editor_add_operations.sql`: ledger email có RLS, không grant trực tiếp cho client/service role. `begin_editor_add` và `finish_editor_add` chỉ service_role EXECUTE; `editor_add_recovery` chỉ authenticated EXECUTE và kiểm tra Admin bên trong. Giữ RLS/Editor policy nội dung hiện hành. Bổ sung vào nhánh revoke đã kiểm tra của `set_editor_role`: vô hiệu hóa lease đang chạy và đánh dấu revoked, giữ nguyên các guard/ACL còn lại. Cập nhật capability để release gate biết cả hai schema có mặt.
 4. Chạy `supabase/hsv-v3-postflight.sql` và audit schema/ACL đầy đủ lần nữa. Không suy ra RLS live từ frontend mock tests.
-5. Deploy Edge source với JWT verification bật và service-role chỉ có trong Edge environment. Ban đầu để `BOOKCLUB_ROLE_MODE=fixture`, `BOOKCLUB_ROLE_FIXTURE_USER_ID` trỏ fixture đã xác minh, không bật gửi email. Mã mới vẫn dùng tên biến cũ để tránh mất cấu hình ngầm.
-6. Thử native sandbox `BOOKCLUB_ROLE_MODE=sandbox`, `HSV_LOCAL_ORIGIN=http://127.0.0.1:<port>`, Supabase URL loopback hoặc Kong local, email sink thật (không relay). Chỉ sandbox đã xác minh mới đặt `HSV_INVITATIONS_ENABLED=verified`. Thử email nhận được, accept/mật khẩu/Editor, expired/reused links, SMTP lỗi, response bị mất và request đồng thời. Mode sandbox từ chối URL Supabase cloud.
+5. Thử native sandbox `BOOKCLUB_ROLE_MODE=sandbox`, `HSV_LOCAL_ORIGIN=http://127.0.0.1:<port>`, Supabase URL loopback hoặc Kong local, email sink thật (không relay). Chỉ sandbox đã xác minh mới đặt `HSV_INVITATIONS_ENABLED=verified`. Thử email nhận được, accept/mật khẩu/Editor, expired/reused links, SMTP lỗi, response bị mất và request đồng thời. Mode sandbox từ chối URL Supabase cloud.
+6. Sau native sandbox PASS, deploy Edge production với JWT verification bật, service-role chỉ trong Edge environment, mode `live` và gửi thư `disabled`. Đọc lại source/revision và smoke read-only; không lấy tài khoản thật làm fixture. Mã vẫn dùng các tên biến cũ để giữ tương thích cấu hình.
 7. Cấu hình production Auth redirect chính xác `https://imnwngr.github.io/hsv/auth/accept` và `/hsv/auth/callback`. Giữ redirect `/bookclub/auth/accept` trong thời gian chuyển đổi nếu còn thư đang chờ, nhưng đường dẫn đó còn cần hosting phục vụ. Site URL mới `/hsv/`. CORS dùng origin `https://imnwngr.github.io`, không có base path.
-8. Khi các gate email/server được xác minh, production chuyển `BOOKCLUB_ROLE_MODE=live` và `HSV_INVITATIONS_ENABLED=verified`. Chưa có giá trị `verified` thì vẫn cấp tài khoản có sẵn được, email mới nhận `invitation_not_ready`; không tuyên bố đã mời.
+8. Mode production hiện đã là `live`. Giữ `HSV_INVITATIONS_ENABLED=disabled` trong khi chuẩn bị provider, rename và triển khai Pages. Chỉ chuyển sang `verified` sau khi các gate email/server PASS và `/hsv/auth/accept` đã được phục vụ, smoke callback thành công. Chưa mở gửi thư thì vẫn cấp tài khoản có sẵn được, email mới nhận `invitation_not_ready`; không tuyên bố đã mời.
 
 ## Ngữ nghĩa và phục hồi tài khoản
 

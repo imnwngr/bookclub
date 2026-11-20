@@ -1,6 +1,6 @@
 # Sự kiện Hội Sinh viên CTUT · 3.0.0
 
-Nền tảng sự kiện Hội Sinh viên CTUT. Source 3.0.0 bổ sung Thiệp mời/Thiệp chúc, màu riêng cho từng sự kiện và luồng thêm Editor có trạng thái khôi phục. Giữ typography tiếng Việt, vật liệu giấy/dệt, opening và nhạc Liquid Glass. **Database v3 đã áp dụng; chưa phát hành frontend/Edge v3**: còn kiểm tra Auth/SMTP/secrets qua kênh quản trị bổ sung trước khi đổi repository/Pages. Xem [HSV-V3-PLAN.md](HSV-V3-PLAN.md), [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md) và [HSV-V3-VERIFICATION.md](HSV-V3-VERIFICATION.md).
+Nền tảng sự kiện Hội Sinh viên CTUT. Source 3.0.0 bổ sung Thiệp mời/Thiệp chúc, màu riêng cho từng sự kiện và luồng thêm Editor có trạng thái khôi phục. Giữ typography tiếng Việt, vật liệu giấy/dệt, opening và nhạc Liquid Glass. **Database và Edge v3 đã triển khai; Auth có callback cũ/mới; frontend chưa phát hành.** Chưa có dịch vụ gửi email nên lời mời email mới vẫn tắt. Đây là điều kiện còn thiếu trước khi hoàn tất phiên bản, đổi repository/Pages và tạo tag. Xem [HSV-V3-PLAN.md](HSV-V3-PLAN.md), [HSV-V3-MIGRATION.md](HSV-V3-MIGRATION.md) và [HSV-V3-VERIFICATION.md](HSV-V3-VERIFICATION.md).
 
 ## Chạy local
 
