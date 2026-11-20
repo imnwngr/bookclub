@@ -294,7 +294,11 @@ export default function RoleDirectory() {
               Nhập email để hệ thống kiểm tra và cấp quyền Editor cho tài khoản
               đã có. Khi khôi phục yêu cầu, hệ thống không tự gửi lại email.
             </p>
-            <div role="status" aria-live="polite">
+            <div
+              role="status"
+              aria-label="Trạng thái gửi lời mời"
+              aria-live="polite"
+            >
               {capabilities.isFetching ? (
                 <p>Đang kiểm tra trạng thái gửi lời mời…</p>
               ) : capabilities.error ? (
@@ -341,7 +345,11 @@ export default function RoleDirectory() {
                 <option value="editor">Editor</option>
               </select>
             </label>
-            <div role="status" aria-live="polite">
+            <div
+              role="status"
+              aria-label="Kết quả thêm tài khoản"
+              aria-live="polite"
+            >
               {busy && <p>Đang kiểm tra tài khoản và xử lý quyền…</p>}
               {feedback && (
                 <p

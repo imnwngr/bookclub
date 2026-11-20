@@ -389,10 +389,11 @@ verify_jwt = true
     await page
       .getByRole("button", { name: "Thêm Editor", exact: true })
       .click();
-    await expect(page.getByRole("dialog").getByRole("status")).toContainText(
-      "Đã cấp quyền Editor, đang chờ",
-      { timeout: 30000 },
-    );
+    await expect(
+      page
+        .getByRole("dialog")
+        .getByRole("status", { name: "Kết quả thêm tài khoản" }),
+    ).toContainText("Đã cấp quyền Editor, đang chờ", { timeout: 30000 });
     await page.screenshot({
       path: path.join(root, "native-invitation-pending.png"),
     });
