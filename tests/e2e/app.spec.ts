@@ -1289,6 +1289,8 @@ test("guest directory compact/full, dirty guard, reorder and reload (mock API)",
       .toBeGreaterThan(1);
     await cdp.detach();
   }
+  await expect(handle).toBeEnabled();
+  await expect(page.locator(".directory-drag-overlay")).toHaveCount(0);
   await expect(page.getByLabel("Chức vụ / mô tả")).toHaveValue(
     "Bản nháp đang chỉnh sửa",
   );
