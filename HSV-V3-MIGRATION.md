@@ -1,6 +1,6 @@
 # HSV 3.0.0: migration và chuyển đổi
 
-**Hai migration database và Edge v3 đã triển khai production ngày 20/11/2026; Auth đã có callback cũ/mới; frontend chưa phát hành.** MCP và CLI 3.2.0 đã xác thực với project `trdofhdspbkwgernwybp`, PostgreSQL 17.11, ACTIVE_HEALTHY. Trước migration đã đọc schema/ACL/RLS/history, lấy snapshot phần bị ảnh hưởng, khôi phục trên PostgreSQL local và chạy hai file migration nguyên bản. Chi tiết và giới hạn backup ở dưới. Chưa có dịch vụ gửi email, nên `HSV_INVITATIONS_ENABLED=disabled`. Không đưa password/token vào chat hoặc repository.
+**Hai migration database và Edge v3 đã triển khai production ngày 20/11/2026; Auth đã có callback cũ/mới; repository đã đổi thành `imnwngr/hsv`; frontend HSV v3 chưa phát hành.** MCP và CLI 3.2.0 đã xác thực với project `trdofhdspbkwgernwybp`, PostgreSQL 17.11, ACTIVE_HEALTHY trong đợt backend trước. Trước migration đã đọc schema/ACL/RLS/history, lấy snapshot phần bị ảnh hưởng, khôi phục trên PostgreSQL local và chạy hai file migration nguyên bản. SMTP Resend đã hoàn tất theo xác nhận của người dùng, chưa phải bằng chứng kiểm thử luồng mời Editor production. Đợt Git/tài liệu này không chạy migration hoặc thay cấu hình backend. Không đưa password/token vào chat hoặc repository.
 
 ## Trạng thái đã áp dụng
 
@@ -23,11 +23,11 @@ Containment: giữ cột và ledger mới cùng mọi dữ liệu phát sinh; kh
 
 ## Auth và email: trạng thái hiện tại
 
-CLI đọc lại cấu hình xác nhận allowlist gồm cả bốn callback accept/callback dưới `/bookclub/` và `/hsv/`. Site URL là `https://imnwngr.github.io/bookclub/` để khớp Pages hiện tại; chỉ chuyển sang `/hsv/` cùng đợt frontend. Các cấu hình Auth khác được giữ nguyên. Edge xác minh JWT, CORS chỉ dùng `https://imnwngr.github.io`, mode `live` và gửi lời mời `disabled`. Metadata digest của hai cờ được đối chiếu với giá trị dự kiến mà không in giá trị bí mật. Custom SMTP và send-email hook đều chưa bật.
+Audit CLI trước khi người dùng bổ sung Resend xác nhận bốn callback accept/callback dưới `/bookclub/` và `/hsv/`, Site URL còn `https://imnwngr.github.io/bookclub/`, Edge xác minh JWT, CORS origin `https://imnwngr.github.io`, mode `live` và gửi lời mời `disabled`. Khi đó custom SMTP và send-email hook chưa bật. Đây là bằng chứng lịch sử; đợt Git/tài liệu không đọc lại Auth/SMTP/Edge secrets và không chứng nhận cấu hình hiện tại từ dữ liệu cũ.
 
-Người dùng xác nhận chưa có dịch vụ gửi email. Theo [tài liệu SMTP của Supabase](https://supabase.com/docs/guides/auth/auth-smtp), bộ gửi mặc định giới hạn địa chỉ thuộc team và hiện có hạn mức 2 thư/giờ; không dùng để mở tính năng mời email tùy ý. Điều kiện tối thiểu còn cần: cấu hình provider SMTP/sender đã xác minh trực tiếp tại [Auth SMTP](https://supabase.com/dashboard/project/trdofhdspbkwgernwybp/auth/smtp), không gửi mật khẩu/token qua chat. Chưa có điều kiện này thì không bật `verified`, không gửi thử tới người thật và không coi lời mời production đã hoạt động.
+Người dùng đã xác nhận tự cấu hình SMTP Resend và nhận email thử thành công; hạng mục SMTP được ghi nhận hoàn tất theo xác nhận này, không còn BLOCKED vì thiếu provider. Agent không gửi email hoặc đọc thông tin SMTP trong đợt này. Email thử chưa xác nhận chuỗi Admin thêm email → Auth invite → cấp Editor → mở callback → nhận lời mời/đăng nhập. Không yêu cầu cung cấp mật khẩu hoặc token qua chat.
 
-Sau khi có provider: đọc lại cấu hình đã che secrets, xác nhận sender/domain và redirect; thử bằng mailbox sandbox do provider hỗ trợ hoặc mail sink tách biệt; giữ trạng thái chưa xác minh delivery production nếu chưa có kiểm chứng tương ứng. Chỉ mở gửi thư sau khi `/hsv/auth/accept` được phục vụ và smoke đã PASS. Trong chuyển đổi giữ cờ disabled cho đến khi Pages mới sẵn sàng. Hộp thoại đọc capability từ Edge cho Admin và nêu rõ khi chỉ thêm được tài khoản có sẵn; server vẫn kiểm điều kiện ở mỗi thao tác add.
+Trong đợt phát hành riêng: đối chiếu cấu hình Auth/redirect đã che secrets, kiểm chứng luồng mời Editor với môi trường/địa chỉ kiểm thử được phép và ghi rõ phạm vi kết quả. Chỉ mở gửi thư sau khi frontend HSV phục vụ `/hsv/auth/accept` và các gate liên quan PASS. Đợt Git/tài liệu không bật cờ gửi lời mời. Hộp thoại đọc capability từ Edge cho Admin; server vẫn kiểm điều kiện ở mỗi thao tác add.
 
 ## Trước khi ghi production
 
@@ -47,7 +47,7 @@ Chỉ áp dụng **các file mới chưa áp dụng**, qua migration management 
 5. Thử native sandbox `BOOKCLUB_ROLE_MODE=sandbox`, `HSV_LOCAL_ORIGIN=http://127.0.0.1:<port>`, Supabase URL loopback hoặc Kong local, email sink thật (không relay). Chỉ sandbox đã xác minh mới đặt `HSV_INVITATIONS_ENABLED=verified`. Thử email nhận được, accept/mật khẩu/Editor, expired/reused links, SMTP lỗi, response bị mất và request đồng thời. Mode sandbox từ chối URL Supabase cloud.
 6. Sau native sandbox PASS, deploy Edge production với JWT verification bật, service-role chỉ trong Edge environment, mode `live` và gửi thư `disabled`. Đọc lại source/revision và smoke read-only; không lấy tài khoản thật làm fixture. Mã vẫn dùng các tên biến cũ để giữ tương thích cấu hình.
 7. Cấu hình production Auth redirect chính xác `https://imnwngr.github.io/hsv/auth/accept` và `/hsv/auth/callback`. Giữ redirect `/bookclub/auth/accept` trong thời gian chuyển đổi nếu còn thư đang chờ, nhưng đường dẫn đó còn cần hosting phục vụ. Site URL mới `/hsv/`. CORS dùng origin `https://imnwngr.github.io`, không có base path.
-8. Mode production hiện đã là `live`. Giữ `HSV_INVITATIONS_ENABLED=disabled` trong khi chuẩn bị provider, rename và triển khai Pages. Chỉ chuyển sang `verified` sau khi các gate email/server PASS và `/hsv/auth/accept` đã được phục vụ, smoke callback thành công. Chưa mở gửi thư thì vẫn cấp tài khoản có sẵn được, email mới nhận `invitation_not_ready`; không tuyên bố đã mời.
+8. Audit backend trước ghi nhận mode `live` và `HSV_INVITATIONS_ENABLED=disabled`; rename và SMTP Resend nay đã hoàn tất. Trong đợt phát hành riêng, đối chiếu lại cờ trước khi thay đổi; chỉ chuyển sang `verified` sau khi các gate email/server PASS và frontend HSV phục vụ `/hsv/auth/accept`, smoke callback thành công. Chưa mở gửi thư thì vẫn cấp tài khoản có sẵn được, email mới nhận `invitation_not_ready`; không tuyên bố đã mời. Không thực hiện bước này trong đợt Git/tài liệu.
 
 ## Ngữ nghĩa và phục hồi tài khoản
 
@@ -67,13 +67,13 @@ Schema `{version:1,primary:'#RRGGBB'}` không nhận key khác/raw CSS. Giá tr�
 
 ## Rename, Pages và link cũ
 
-Chỉ rename khi backend/recovery gate và local/CI tests đã PASS. Recheck `imnwngr/hsv` không tồn tại; `gh api -X PATCH repos/imnwngr/bookclub -f name=hsv`, rồi `git remote set-url origin https://github.com/imnwngr/hsv.git`. Không đổi thư mục local. Kiểm tra lại Pages source workflow, repository variables/secrets và quyền Actions sau rename. Chưa thực hiện các lệnh này trong lần triển khai local.
+Rename đã hoàn tất: repository [imnwngr/hsv](https://github.com/imnwngr/hsv), origin `https://github.com/imnwngr/hsv.git`. Không chạy lại lệnh rename hoặc chuyển thư mục local. Đối chiếu GitHub sau rename xác nhận quyền ADMIN, nhánh mặc định `main` tại `8ee2e3e`, Pages dùng workflow và URL `https://imnwngr.github.io/hsv/`. Source v3 nằm trên `hsv-v3`; đợt này chỉ commit/push nhánh đó, không merge, đổi default branch, tạo tag/release hoặc deploy. `HSV_V3_PRODUCTION_READY` chưa được đặt trong lần đọc lại; không tạo hoặc bật biến này.
 
 Workflow mới chạy verify và native account sandbox cho main/hsv-v3 và PR; deploy cần cả hai job PASS. Native workflow có thể chạy thủ công; harness chỉ dùng stack loopback tên `hsv-v3-native`, không nhận URL/credential production. CLI 3 dùng `[local_smtp]`, bật verify_jwt, không relay; chỉ upload result JSON và screenshots fixture, không upload status keys/logs Auth. Deploy chỉ cho main tại `imnwngr/hsv`, khi repository variable `HSV_V3_PRODUCTION_READY=true`; trước deploy chạy capability check read-only. Biến gate chỉ được bật sau khi operator có bằng chứng backup, migration, native Auth/Edge/email và smoke phù hợp. Không set true chỉ vì unit tests xanh. Không overwrite tag v3.0.0; tag tạo sau đủ điều kiện release.
 
 Canonical: `/hsv/thiep-moi/:code/:alias`, `/hsv/thiep-chuc/:code/:alias`; detail bỏ phần alias. Sai loại hoặc URL ngắn `/hsv/:code/:alias` chuyển canonical sau resolver kiểm quyền, giữ query/hash. Slug admin/auth/thiep-moi/thiep-chuc được bảo vệ. 404 Pages round-trip đã được test ở local server mô phỏng HTTP 404.
 
-`/bookclub/` hiện còn phục vụ bản cũ vì repo chưa rename. GitHub repository redirect không chứng minh GitHub Pages redirect. Sau rename, giữ link cũ cần một hosting riêng ở `/bookclub/` phục vụ bridge sang `/hsv/` rồi resolver xác định loại. Chưa tạo compatibility repository/hosting; không cam kết link cũ còn chạy sau rename. Không thay tên bucket bookclub-venues/bookclub-music.
+HTTP kiểm tra ngày 20/11 sau rename: `/bookclub/` trả 404; `/hsv/` trả 200 nhưng title vẫn là BookClub, tham chiếu `/bookclub/assets/index-QrJGegpT.js` và `/bookclub/assets/preloadInvitation-CAOmjNHy.js`, đều trả 404. URL Pages mới chưa chứng minh frontend HSV v3 đã phát hành hoặc hoạt động. Bằng chứng chỉ đọc ở `.local/hsv-v3/repo-rename-pages.json`. Giữ link cũ cần hosting bridge riêng ở `/bookclub/`; chưa tạo hoặc kiểm chứng bridge. Phát hành frontend và xử lý link cũ là công việc còn lại ngoài đợt Git/tài liệu. Không thay tên bucket bookclub-venues/bookclub-music.
 
 ## Rollback / containment
 
